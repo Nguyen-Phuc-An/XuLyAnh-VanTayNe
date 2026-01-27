@@ -1,32 +1,6 @@
 # Hệ Thống Nhận Dạng Vân Tay
 
-Một hệ thống nhận dạng vân tay hoàn chỉnh được xây dựng bằng Python và OpenCV, với giao diện người dùng thân thiện.
-
-## 🎉 Cập Nhật Mới (Phiên Bản 2.0)
-
-### ✨ Tính Năng Đã Sửa Chữa
-- ✅ **Minutiae Extraction** - Từ 0 → 60-150 minutiae (phương pháp kép: Crossing Number + Neighbor Count)
-- ✅ **Hiệu suất Skeletonization** - 10x nhanh hơn (Zhang-Suen → Scikit-image)
-- ✅ **Giao diện** - Cải tiến layout với Notebook tabs + PanedWindow + Canvas scrollable
-- ✅ **Error Handling** - Xử lý lỗi tốt hơn, thông báo người dùng
-- ✅ **Debug Output** - Print statement chi tiết để troubleshooting
-
-### 🔧 Những Lỗi Đã Sửa
-| Lỗi | Nguyên nhân | Giải pháp |
-|-----|-----------|----------|
-| No minutiae found | Ngưỡng CN = 127 quá cao | Giảm xuống 100 + dual method |
-| GUI freeze | Zhang-Suen quá chậm | Dùng scikit-image (10x faster) |
-| Initialization error | xu_ly_su_kien chưa được khởi tạo | Reorder __init__ |
-| Scrollbar error | Frame không hỗ trợ yview | Dùng Canvas |
-| Image cutoff | Layout cố định | Notebook + PanedWindow |
-
-### 📊 Kết Quả Kiểm Thử
-```
-Test Image: 500×500 pixels
-Processing Time: ~430ms (tất cả 6 bước)
-Minutiae Found: 142 (137 ending + 5 bifurcation)
-Status: ✅ 100% Hoạt động
-```
+Một hệ thống nhận dạng vân tay hoàn chỉnh được xây dựng bằng Python và OpenCV, với giao diện người dùng thân thiện và hệ thống cơ sở dữ liệu MySQL tích hợp.
 
 ## 📋 Mục tiêu dự án
 
@@ -34,25 +8,45 @@ Xây dựng một hệ thống có khả năng:
 - Chuyển ảnh gốc sang ảnh xám
 - Chuẩn hóa và tăng cường ảnh (lọc nhiễu, Gabor filter)
 - Nhị phân hóa và làm mảnh ảnh vân tay
-- Trích chọn đặc trưng minutiae (ending, bifurcation)
-- So khớp 2 mẫu vân tay
+- **Trích chọn đặc trưng với 6 phương pháp:**
+  - Minutiae chi tiết (ending, bifurcation)
+  - Harris Corner Detection
+  - ORB Features
+  - LBP (Local Binary Pattern)
+  - Ridge Orientation Field
+  - Frequency Domain Analysis
+- **So khớp 2 mẫu vân tay với 7 phương pháp:**
+  - Minutiae Matching (mặc định)
+  - Feature Matching (SIFT/ORB)
+  - Harris Corner Matching
+  - ORB Features Matching
+  - LBP Texture Matching
+  - Ridge Orientation Matching
+  - Frequency Domain Matching
+- **Lưu trữ người dùng và vân tay trong MySQL database (xla_vantay)**
+- **Nhận dạng người dùng từ ảnh vân tay**
+- **Hiển thị thông tin người dùng tương ứng**
 - Hiển thị các bước xử lý qua giao diện người dùng
 - Xuất file kết quả (ảnh + thông số)
 
 ## 🏗️ Cấu trúc thư mục
 
 ```
-he_thong_nhan_dang_van_tay/
+XuLyAnh-VanTayNe/
 │
 ├── data/                              # Thư mục lưu ảnh đầu vào
 │   └── .gitkeep
+│
+├── database/                          # Database MySQL
+│   └── schema.sql                     # File tạo database
 │
 ├── src/
 │   ├── giao_dien/
 │   │   ├── __init__.py
 │   │   ├── giao_dien_chinh.py         # Giao diện chính Tkinter
 │   │   ├── xu_ly_su_kien.py           # Xử lý sự kiện
-│   │   └── hien_thi_ket_qua.py        # Hiển thị kết quả
+│   │   ├── hien_thi_ket_qua.py        # Hiển thị kết quả
+│   │   └── database_handler.py        # Xử lý sự kiện database
 │   │
 │   ├── tien_xu_ly/
 │   │   ├── __init__.py
@@ -71,12 +65,20 @@ he_thong_nhan_dang_van_tay/
 │   │
 │   ├── trich_dac_trung/
 │   │   ├── __init__.py
-│   │   ├── trich_minhut.py            # Trích minutiae (CN + Neighbor)
-│   │   └── ve_dac_trung.py            # Vẽ đặc trưng
+│   │   ├── trich_dac_trung_chi_tiet.py  # Trích đặc trưng (6 phương pháp)
+│   │   └── ve_dac_trung.py              # Vẽ đặc trưng
 │   │
 │   ├── so_khop/
 │   │   ├── __init__.py
-│   │   └── so_khop_van_tay.py         # So khớp vân tay
+│   │   └── so_khop_van_tay.py           # So khớp vân tay (7 phương pháp)
+│   │
+│   ├── database/
+│   │   ├── __init__.py
+│   │   └── database_manager.py          # Quản lý MySQL database
+│   │
+│   ├── nhan_dang/
+│   │   ├── __init__.py
+│   │   └── fingerprint_recognition.py   # Nhận dạng người dùng
 │   │
 │   └── chuong_trinh_chinh.py          # Chương trình main
 │
@@ -96,20 +98,37 @@ he_thong_nhan_dang_van_tay/
 - **SciPy** - Xử lý khoa học
 - **Tkinter** - Giao diện người dùng
 - **Pillow (PIL)** - Xử lý ảnh PIL
+- **MySQL Connector** - Kết nối MySQL database
+- **MySQL Workbench** - Quản lý database (tùy chọn)
 
 ## 📦 Cài đặt
 
 ### 1. Cài đặt Python
 Đảm bảo bạn đã cài đặt Python 3.7 hoặc cao hơn.
 
-### 2. Cài đặt thư viện
+### 2. Cài đặt MySQL Server
+- Tải và cài đặt MySQL Server từ [mysql.com](https://www.mysql.com/downloads/)
+- Hoặc sử dụng XAMPP/WAMP nếu muốn
+
+### 3. Cài đặt thư viện Python
 ```bash
-pip install -r thu_vien_can_thiet.txt
+python -m pip install -r thu_vien_can_thiet.txt
 ```
 
 Hoặc cài đặt thủ công:
 ```bash
-pip install opencv-python numpy scikit-image scipy pillow
+pip install opencv-python numpy scikit-image scipy pillow mysql-connector-python
+```
+
+### 4. Tạo Database
+```bash
+# Mở MySQL Command Line hoặc MySQL Workbench
+mysql -u root -p
+
+# Chạy file schema.sql
+source database/schema.sql
+
+# Hoặc copy toàn bộ nội dung file schema.sql và paste vào MySQL
 ```
 
 ## 🚀 Hướng dẫn sử dụng
@@ -144,13 +163,41 @@ python src/chuong_trinh_chinh.py
 
 #### Bước 5: Trích chọn đặc trưng
 - Click nút "🔍 Trích đặc trưng"
-- Sử dụng thuật toán Crossing Number
-- Phân loại: Ending points và Bifurcation points
+- **6 phương pháp trích đặc trưng:**
+  1. **Minutiae** - Crossing Number (ending, bifurcation)
+  2. **Harris Corners** - Phát hiện điểm góc/tâm
+  3. **ORB Features** - ORB keypoints & descriptors
+  4. **LBP** - Local Binary Pattern (texture)
+  5. **Ridge Orientation** - Phân tích hướng đuôi
+  6. **Frequency Domain** - Phân tích tần số
 
-#### Bước 6: So khớp (tùy chọn)
-- Click nút "⚖️ So khớp"
-- So sánh vị trí và hướng của các minutiae
-- Trả về tỉ lệ tương đồng
+#### Bước 6: So khớp
+- Click dropdown "So khớp" để chọn phương pháp
+- **7 tùy chọn:**
+  1. **Minutiae Matching** - So khớp minutiae points
+  2. **Feature Matching** - SIFT/ORB features
+  3. **Harris Matching** - Harris corner points
+  4. **ORB Matching** - ORB descriptors (Hamming distance)
+  5. **LBP Matching** - LBP histogram comparison
+  6. **Ridge Matching** - Ridge orientation fields
+  7. **Frequency Matching** - Frequency domain characteristics
+
+- Click nút "⚖️ Thực hiện"
+- Xem kết quả so khớp
+
+#### Bước 7 (Tùy chọn): Nhận dạng từ Database
+- Trước tiên phải kết nối MySQL database (xla_vantay)
+- Sử dụng tab "🔍 Tìm Kiếm Người Dùng"
+- Chọn ảnh vân tay và phương pháp so khớp
+- Hệ thống tự động tìm người dùng tương ứng
+- Hiển thị thông tin người dùng nếu tìm thấy
+
+#### Bước 8 (Tùy chọn): Đăng ký người dùng mới
+- Sử dụng tab "📝 Đăng Ký Người Dùng"
+- Nhập thông tin: Username, Họ tên, Email, Số ĐT, CCCD, Chức vụ, Phòng ban
+- Chọn ảnh vân tay
+- Tự động xử lý ảnh và trích đặc trưng
+- Click "✅ Đăng Ký" để lưu vào database
 
 ## 📊 Thông số kỹ thuật
 
@@ -166,16 +213,113 @@ python src/chuong_trinh_chinh.py
 - **Thuật toán**: Zhang-Suen
 - **Lọc noise**: Loại bỏ đường dài < 3 pixels
 
-### Trích chọn đặc trưng
+### Trích chọn đặc trưng - 6 phương pháp
+
+#### 1. Minutiae Features
 - **Phương pháp**: Crossing Number
 - **Loại điểm**:
   - **Ending**: CN = 1
   - **Bifurcation**: CN = 3
 - **Lọc**: Loại bỏ điểm cách nhau < 5 pixels
 
-### So khớp
-- **Khoảng cách tối đa**: 50 pixels
-- **Độ chịu nước cơn hướng**: ±30 độ
+#### 2. Harris Corner Detection
+- Phát hiện điểm góc/tâm
+- Auto-correlation matrix
+- Non-maximal suppression
+
+#### 3. ORB Features
+- Oriented FAST and Rotated BRIEF
+- Keypoints cùng descriptors
+- Rotation invariant
+
+#### 4. LBP (Local Binary Pattern)
+- Texture analysis
+- Mỗi pixel so sánh với 8 hàng xóm
+- Histogram đặc tính
+
+#### 5. Ridge Orientation Field
+- Tính toán hướng ridge tại mỗi điểm
+- Gradient-based method
+- Consistency measurement
+
+#### 6. Frequency Domain Features
+- FFT analysis
+- Ridge frequency extraction
+- Energy characteristics
+
+### So khớp - 7 phương pháp
+
+#### 1. Minutiae Matching
+- Khoảng cách tối đa: 50 pixels
+- Độ chịu lệch hướng: ±30 độ
+- Dựa trên vị trí và hướng minutiae
+
+#### 2. Feature Matching
+- Phát hiện SIFT hoặc ORB features
+- KNN matching với Lowe's ratio test
+- Ratio: 0.7
+
+#### 3. Harris Corner Matching
+- Detect corners từ cả 2 ảnh
+- Spatial proximity matching
+- Euclidean distance based
+
+#### 4. ORB Features Matching
+- ORB keypoints & Hamming distance
+- Matched count scoring
+- Higher match count = higher score
+
+#### 5. LBP Texture Matching
+- LBP histogram comparison
+- Chi-square distance
+- Normalized to 0-100 scale
+
+#### 6. Ridge Orientation Matching
+- Compare orientation fields
+- Mean orientation difference
+- Consistency similarity
+
+#### 7. Frequency Domain Matching
+- FFT magnitude comparison
+- Ridge frequency similarity
+- Energy similarity
+- Robust với biến dạng
+
+#### 7. Comprehensive Matching
+- Kết hợp tất cả 6 phương pháp trên
+- Tính điểm trung bình, cao nhất, thấp nhất
+- Độ chính xác cao nhất
+
+### Database MySQL
+
+#### Table: users
+- user_id, username, full_name
+- email, phone, address
+- date_of_birth, gender
+- identification_number
+- position, department
+- status (active/inactive)
+
+#### Table: fingerprints
+- fingerprint_id, user_id
+- finger_name (Thumb, Index, Middle, Ring, Pinky)
+- hand (Left/Right)
+- image_path, image_data (binary)
+- minutiae_data (JSON)
+- quality_score
+- status (approved/pending/rejected)
+
+#### Table: matching_history
+- match_id, user_id, fingerprint_id
+- query_image_path
+- matching_method
+- similarity_score
+- is_match (true/false)
+- matched_at (timestamp)
+
+#### Table: system_settings
+- setting_key, setting_value
+- Lưu các ngưỡng và cài đặt hệ thống
 
 ## 🎨 Giao diện người dùng
 
@@ -251,21 +395,156 @@ trich_minutiae_chi_tiet(anh_manh)           # Full minutiae extraction
 
 ### so_khop_van_tay.py
 ```python
-so_khop_minutiae(minutiae1, minutiae2)      # Match minutiae
-tinh_diem_tuong_dong_tien_tien(m1, m2)     # Advanced similarity score
-phan_loai_match(score, percentage)          # Classify match type
+# Phương pháp cơ bản
+so_khop_minutiae(minutiae1, minutiae2)           # So khớp minutiae
+tinh_diem_tuong_dong_tien_tien(m1, m2)          # Điểm nâng cao
+phan_loai_match(score, percentage)              # Phân loại
+
+# Phương pháp mới (6 phương pháp)
+so_khop_template_matching(anh1, anh2)           # Template Matching
+so_khop_structural_similarity(anh1, anh2)       # SSIM
+so_khop_contour_matching(anh1, anh2)            # Contour
+so_khop_histogram_matching(anh1, anh2)          # Histogram
+so_khop_feature_matching(anh1, anh2)            # Feature (SIFT/ORB)
+so_khop_thong_ke_toan_bo(m1, m2, anh1, anh2)   # Comprehensive
+```
+
+### database_manager.py
+```python
+# User operations
+db.add_user(username, full_name, ...)           # Thêm người dùng
+db.get_user_by_id(user_id)                      # Lấy thông tin
+db.get_all_users(status='active')               # Danh sách người dùng
+db.update_user(user_id, **kwargs)               # Cập nhật
+db.delete_user(user_id)                         # Xóa
+
+# Fingerprint operations
+db.add_fingerprint(user_id, finger_name, ...)   # Thêm vân tay
+db.get_fingerprints_by_user(user_id)            # Lấy vân tay của user
+db.get_all_fingerprints(status='approved')      # Tất cả vân tay
+
+# Search & Statistics
+db.search_users(keyword)                        # Tìm kiếm
+db.get_fingerprints_for_matching()              # Lấy vân tay để match
+db.get_statistics()                             # Thống kê
+```
+
+### fingerprint_recognition.py
+```python
+# Nhận dạng
+recognition.identify_user_from_minutiae(minutiae, max_results=5)
+recognition.identify_user_from_image(anh, minutiae, method='comprehensive')
+recognition.get_user_info(user_id)
+recognition.save_match_record(...)
 ```
 
 ## 📝 Ví dụ sử dụng lập trình
 
+### Ví dụ 1: So khớp ảnh với 6 phương pháp mới
+```python
+from src.so_khop.so_khop_van_tay import (
+    so_khop_template_matching, so_khop_structural_similarity,
+    so_khop_contour_matching, so_khop_histogram_matching,
+    so_khop_feature_matching, so_khop_thong_ke_toan_bo
+)
+
+# Template Matching
+result = so_khop_template_matching(anh1, anh2)
+print(f"Template: {result['similarity_score']:.2f}")
+
+# SSIM
+result = so_khop_structural_similarity(anh1, anh2)
+print(f"SSIM: {result['similarity_score']:.2f}")
+
+# Feature Matching
+result = so_khop_feature_matching(anh1, anh2)
+print(f"Features: {result['good_matches']} matches")
+
+# Comprehensive (all methods)
+results = so_khop_thong_ke_toan_bo(minutiae1, minutiae2, anh1, anh2)
+print(f"Overall: {results['overall_score']:.2f}")
+```
+
+### Ví dụ 2: Làm việc với Database MySQL
+```python
+from src.database.database_manager import DatabaseManager
+from src.nhan_dang.fingerprint_recognition import FingerprintRecognition
+
+# Kết nối database
+db = DatabaseManager(host='localhost', user='root', password='123456', 
+                     database='xla_vantay')
+db.connect()
+
+# Thêm người dùng mới
+user_id = db.add_user(
+    username='nguyen_van_a',
+    full_name='Nguyễn Văn A',
+    email='a@example.com',
+    phone='0123456789',
+    identification_number='123456789'
+)
+
+# Lưu vân tay
+fingerprint_id = db.add_fingerprint(
+    user_id=user_id,
+    finger_name='Thumb',
+    hand='Right',
+    image_path='path/to/image.png',
+    minutiae_data=minutiae_dict,
+    quality_score=85.5
+)
+
+print(f"Lưu thành công! User ID: {user_id}, Fingerprint ID: {fingerprint_id}")
+
+# Ngắt kết nối
+db.disconnect()
+```
+
+### Ví dụ 3: Nhận dạng người dùng từ vân tay
+```python
+from src.database.database_manager import DatabaseManager
+from src.nhan_dang.fingerprint_recognition import FingerprintRecognition
+
+# Kết nối database
+db = DatabaseManager()
+db.connect()
+
+# Tạo instance nhận dạng
+recognition = FingerprintRecognition(db)
+
+# Thiết lập ngưỡng
+recognition.set_threshold(70.0)
+
+# Nhận dạng từ ảnh
+results = recognition.identify_user_from_image(
+    image=anh_manh,
+    minutiae=minutiae_data,
+    matching_method='comprehensive',
+    max_results=5
+)
+
+# Hiển thị kết quả
+if results:
+    print("Tìm thấy những người dùng tương ứng:")
+    for result in results:
+        print(f"  - {result['full_name']} ({result['username']})")
+        print(f"    Điểm: {result['similarity_score']:.2f}")
+        print(f"    Ngón tay: {result['finger_name']}")
+else:
+    print("Không tìm thấy người dùng tương ứng")
+
+db.disconnect()
+```
+
+### Ví dụ 4: Luồng xử lý ảnh hoàn chỉnh
 ```python
 from tien_xu_ly.chuyen_xam import chuyen_nh_xam
 from tien_xu_ly.chuan_hoa import chuan_hoa_anh
 from tien_xu_ly.tang_cuong import ap_dung_gabor_filter
 from phan_doan.nhi_phan_hoa import nhi_phan_hoa_otsu
-from lam_manh.lam_manh_anh import lam_manh_zhang_suen
+from lam_manh.lam_manh_anh import lam_manh_scikit_image
 from trich_dac_trung.trich_minhut import trich_minutiae_chi_tiet
-from so_khop.so_khop_van_tay import so_khop_minutiae
+from so_khop.so_khop_van_tay import so_khop_thong_ke_toan_bo
 
 # 1. Tải và chuyển ảnh
 anh_goc, anh_xam = chuyen_nh_xam("fingerprint.jpg")
@@ -280,14 +559,17 @@ anh_tang_cuong = ap_dung_gabor_filter(anh_chuan_hoa)
 anh_nhi_phan, _ = nhi_phan_hoa_otsu(anh_tang_cuong)
 
 # 5. Làm mảnh
-anh_manh = lam_manh_zhang_suen(anh_nhi_phan)
+anh_manh = lam_manh_scikit_image(anh_nhi_phan)
 
 # 6. Trích chọn đặc trưng
 minutiae = trich_minutiae_chi_tiet(anh_manh)
 
-# 7. So khớp
-result = so_khop_minutiae(minutiae1, minutiae2)
-print(f"Match score: {result['similarity_score']}")
+# 7. So khớp (6 phương pháp)
+results = so_khop_thong_ke_toan_bo(minutiae1, minutiae2, anh_manh, anh_manh_2)
+print(f"Điểm trung bình: {results['overall_score']:.2f}")
+print(f"Điểm cao nhất: {results['max_score']:.2f}")
+print(f"Minutiae: {results['minutiae_matching']['similarity_score']:.2f}")
+print(f"Template: {results['template_matching']['similarity_score']:.2f}")
 ```
 
 ## 🐛 Xử lý lỗi
@@ -304,12 +586,18 @@ print(f"Match score: {result['similarity_score']}")
 
 ## 📈 Kế hoạch phát triển
 
+- [x] Minutiae-based matching
+- [x] 6 phương pháp so khớp mới (Template, SSIM, Contour, Histogram, Feature, Comprehensive)
+- [x] Hệ thống database MySQL
+- [x] Lưu trữ người dùng và vân tay
+- [x] Nhận dạng người dùng từ vân tay
 - [ ] Hỗ trợ webcam real-time
-- [ ] Lưu và tải kết quả từ cơ sở dữ liệu
+- [ ] Giao diện quản lý người dùng
 - [ ] Tối ưu hiệu suất (xử lý nhanh hơn)
-- [ ] Ghi nhớ tham số người dùng
 - [ ] Export báo cáo chi tiết (PDF/Excel)
 - [ ] Hỗ trợ nhập dữ liệu từ scanner
+- [ ] API REST cho tích hợp bên thứ ba
+- [ ] Mobile app
 
 ## 📞 Liên hệ & Hỗ trợ
 
@@ -325,6 +613,6 @@ Dự án nhận dạng vân tay Python-OpenCV
 
 ---
 
-**Phiên bản**: 1.0  
-**Cập nhật lần cuối**: 2024  
-**Trạng thái**: Hoàn thiện
+**Phiên bản**: 3.0  
+**Cập nhật lần cuối**: Tháng 1, 2026  
+**Trạng thái**: Hoàn thiện và thêm hệ thống database

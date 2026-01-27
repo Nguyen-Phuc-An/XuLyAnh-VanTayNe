@@ -5,6 +5,10 @@ Chương trình chính - Hệ thống nhận dạng vân tay
 import sys
 import os
 
+# Set encoding cho Windows console
+if sys.platform == 'win32':
+    os.system('chcp 65001 > nul')
+
 # Thêm đường dẫn để import các module
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

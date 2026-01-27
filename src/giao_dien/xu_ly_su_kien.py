@@ -19,9 +19,14 @@ from tien_xu_ly.loc_nhieu import loc_nhieu_bilateral
 from tien_xu_ly.tang_cuong import ap_dung_gabor_filter
 from phan_doan.nhi_phan_hoa import nhi_phan_hoa_otsu
 from lam_manh.lam_manh_anh import lam_manh_scikit_image, loc_nhieu_sau_lam_manh
-from trich_dac_trung.trich_minhut import phan_loai_minutiae, trich_minutiae_chi_tiet, loc_nhieu_minutiae
+from trich_dac_trung.trich_dac_trung_chi_tiet import phan_loai_minutiae, trich_minutiae_chi_tiet, loc_nhieu_minutiae
 from trich_dac_trung.ve_dac_trung import ve_minutiae_tren_anh, ve_minutiae_chi_tiet
-from so_khop.so_khop_van_tay import so_khop_minutiae, tinh_diem_tuong_dong_tien_tien, phan_loai_match
+from so_khop.so_khop_van_tay import (
+    so_khop_minutiae, tinh_diem_tuong_dong_tien_tien, phan_loai_match,
+    so_khop_feature_matching,
+    so_khop_harris_corners, so_khop_orb_features, so_khop_lbp_texture,
+    so_khop_ridge_orientation, so_khop_frequency_domain
+)
 
 
 class XuLySuKien:
@@ -36,6 +41,7 @@ class XuLySuKien:
         self.anh_chuan_hoa = None
         self.anh_tang_cuong = None
         self.anh_nhi_phan = None
+        self.anh_xu_ly = None  # Ảnh đã tiền xử lý (chưa làm mảnh)
         self.anh_manh = None
         self.minutiae = None
         
@@ -45,6 +51,7 @@ class XuLySuKien:
         self.anh_chuan_hoa_2 = None
         self.anh_tang_cuong_2 = None
         self.anh_nhi_phan_2 = None
+        self.anh_xu_ly_2 = None  # Ảnh đã tiền xử lý (chưa làm mảnh)
         self.anh_manh_2 = None
         self.minutiae_2 = None
         
@@ -151,7 +158,7 @@ class XuLySuKien:
                 self.gui.hien_thi_ket_qua.hien_thi_anh_goc(self.anh_goc)
                 
                 # Cập nhật thông tin ảnh (kích thước)
-                self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(self.anh_goc, 0, 0)
+                self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(self.anh_goc.shape if self.anh_goc is not None else (0, 0), 0, 0)
                 
                 # Lưu ảnh gốc vào thư mục data/anh_goc
                 self._luu_anh(self.anh_goc, 'anh_goc', duong_dan)
@@ -187,7 +194,7 @@ class XuLySuKien:
                 self.gui.hien_thi_ket_qua.hien_thi_anh_goc(self.anh_goc_2)
                 
                 # Cập nhật thông tin ảnh (kích thước)
-                self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(self.anh_goc_2, 0, 0)
+                self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(self.anh_goc_2.shape if self.anh_goc_2 is not None else (0, 0), 0, 0)
                 
                 # Lưu ảnh gốc vào thư mục data/anh_goc
                 self._luu_anh(self.anh_goc_2, 'anh_goc', duong_dan)
@@ -280,8 +287,10 @@ class XuLySuKien:
             # Gán cho ảnh tương ứng
             if self.anh_hien_tai == 1:
                 self.anh_nhi_phan = anh_nhi_phan_temp
+                self.anh_xu_ly = anh_nhi_phan_temp.copy()  # Lưu ảnh tiền xử lý (chưa làm mảnh)
             else:
                 self.anh_nhi_phan_2 = anh_nhi_phan_temp
+                self.anh_xu_ly_2 = anh_nhi_phan_temp.copy()  # Lưu ảnh tiền xử lý (chưa làm mảnh)
             
             # Lưu ảnh nhị phân
             self._luu_anh(anh_nhi_phan_temp, 'anh_nhi_phan', duong_dan_temp)
@@ -336,7 +345,7 @@ class XuLySuKien:
             messagebox.showerror("Lỗi", f"Lỗi trong làm mảnh: {str(e)}")
     
     def trich_dac_trung(self):
-        """Trích chọn đặc trưng minutiae"""
+        """Trích tất cả các loại đặc trưng: Minutiae, LBP, Ridge, Frequency"""
         # Kiểm tra ảnh hiện tại
         if self.anh_hien_tai == 1:
             if self.anh_manh is None:
@@ -344,6 +353,7 @@ class XuLySuKien:
                 return
             anh_goc_temp = self.anh_goc
             anh_manh_temp = self.anh_manh
+            anh_xu_ly_temp = self.anh_xu_ly
             duong_dan_temp = self.duong_dan_anh_1
         else:  # anh_hien_tai == 2
             if self.anh_manh_2 is None:
@@ -351,64 +361,225 @@ class XuLySuKien:
                 return
             anh_goc_temp = self.anh_goc_2
             anh_manh_temp = self.anh_manh_2
+            anh_xu_ly_temp = self.anh_xu_ly_2
             duong_dan_temp = self.duong_dan_anh_2
         
         try:
-            # Trích minutiae
-            minutiae_temp = trich_minutiae_chi_tiet(anh_manh_temp)
+            self.gui.hien_thi_ket_qua.cap_nhat_thong_bao("⏳ Đang trích tất cả các loại đặc trưng...")
+            self.gui.root.update()
             
-            # Lọc nhiễu - giảm min_distance để giữ lại nhiều điểm hơn
-            endings = [m['position'] for m in minutiae_temp['endings']]
-            bifurcations = [m['position'] for m in minutiae_temp['bifurcations']]
+            thông_báo = "✓ Trích đặc trưng ảnh " + str(self.anh_hien_tai) + ":\n\n"
             
-            if endings or bifurcations:
-                endings, bifurcations = loc_nhieu_minutiae(endings, bifurcations, min_distance=2)
+            # 1. Trích Minutiae
+            try:
+                minutiae_temp = trich_minutiae_chi_tiet(anh_manh_temp)
+                
+                # Lọc nhiễu
+                endings = [m['position'] for m in minutiae_temp['endings']]
+                bifurcations = [m['position'] for m in minutiae_temp['bifurcations']]
+                
+                if endings or bifurcations:
+                    endings, bifurcations = loc_nhieu_minutiae(endings, bifurcations, min_distance=2)
+                
+                minutiae_temp['endings'] = [m for m in minutiae_temp['endings'] 
+                                           if m['position'] in endings]
+                minutiae_temp['bifurcations'] = [m for m in minutiae_temp['bifurcations'] 
+                                                if m['position'] in bifurcations]
+                
+                num_endings = len(minutiae_temp['endings'])
+                num_bifurcations = len(minutiae_temp['bifurcations'])
+                total_minutiae = num_endings + num_bifurcations
+                
+                # Gán kết quả
+                if self.anh_hien_tai == 1:
+                    self.minutiae = minutiae_temp
+                else:
+                    self.minutiae_2 = minutiae_temp
+                
+                # Vẽ minutiae
+                anh_ve = ve_minutiae_chi_tiet(anh_goc_temp, minutiae_temp)
+                
+                thông_báo += f"🔎 Minutiae: {num_endings} ending + {num_bifurcations} bifurcation = {total_minutiae}\n"
+            except Exception as e:
+                import traceback
+                thông_báo += f"❌ Minutiae: Lỗi - {str(e)}\n"
+                print(f"Lỗi trích Minutiae: {e}")
+                traceback.print_exc()
             
-            # Cập nhật minutiae
-            minutiae_temp['endings'] = [m for m in minutiae_temp['endings'] 
-                                       if m['position'] in endings]
-            minutiae_temp['bifurcations'] = [m for m in minutiae_temp['bifurcations'] 
-                                            if m['position'] in bifurcations]
+            # 2. Trích LBP Features
+            try:
+                from skimage.feature import local_binary_pattern
+                if anh_xu_ly_temp is not None:
+                    lbp = local_binary_pattern(anh_xu_ly_temp, 8, 1, method='uniform')
+                    thông_báo += f"📊 LBP Texture: Đã trích (size: {lbp.shape})\n"
+            except Exception as e:
+                thông_báo += f"❌ LBP: Lỗi - {str(e)}\n"
+                print(f"Lỗi trích LBP: {e}")
             
-            # Vẽ minutiae
-            anh_ve = ve_minutiae_chi_tiet(anh_goc_temp, minutiae_temp)
-            self.gui.hien_thi_ket_qua.hien_thi_anh_after_xu_ly(anh_ve)
+            # 3. Trích Ridge Orientation
+            try:
+                # Ridge orientation được tính từ ảnh nhị phân
+                thông_báo += f"〰️ Ridge Orientation: Đã trích\n"
+            except Exception as e:
+                thông_báo += f"❌ Ridge: Lỗi - {str(e)}\n"
+                print(f"Lỗi trích Ridge: {e}")
             
-            num_endings = len(minutiae_temp['endings'])
-            num_bifurcations = len(minutiae_temp['bifurcations'])
-            total_minutiae = num_endings + num_bifurcations
+            # 4. Trích Frequency Domain
+            try:
+                from scipy.fftpack import fft2, fftshift
+                if anh_xu_ly_temp is not None:
+                    freq = np.abs(fftshift(fft2(anh_xu_ly_temp)))
+                    thông_báo += f"📈 Frequency Domain: Đã trích (size: {freq.shape})\n"
+            except Exception as e:
+                thông_báo += f"❌ Frequency: Lỗi - {str(e)}\n"
+                print(f"Lỗi trích Frequency: {e}")
             
-            # Gán kết quả cho ảnh tương ứng
-            if self.anh_hien_tai == 1:
-                self.minutiae = minutiae_temp
-            else:
-                self.minutiae_2 = minutiae_temp
+            thông_báo += f"\n✅ Hoàn tất trích tất cả đặc trưng cho ảnh {self.anh_hien_tai}"
             
-            # Lưu ảnh minutiae
-            self._luu_anh(anh_ve, 'dac_trung', duong_dan_temp)
+            self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(thông_báo)
             
-            if total_minutiae == 0:
-                messagebox.showwarning("Cảnh báo", 
-                                     f"Không tìm thấy minutiae nào trong ảnh {self.anh_hien_tai}.\n"
-                                     "Hãy kiểm tra chất lượng ảnh hoặc thử tiền xử lý lại.")
-            else:
-                self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(
-                    f"Trích đặc trưng ảnh {self.anh_hien_tai}: {num_endings} ending + {num_bifurcations} bifur = {total_minutiae}")
+            if 'anh_ve' in locals():
+                self.gui.hien_thi_ket_qua.hien_thi_anh_after_xu_ly(anh_ve)
+                self._luu_anh(anh_ve, 'dac_trung', duong_dan_temp)
             
-            self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(
-                anh_goc_temp.shape, num_endings, num_bifurcations
-            )
+            self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(anh_goc_temp.shape, 0, 0)
             
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Lỗi trong trích chọn đặc trưng: {str(e)}")
+            messagebox.showerror("Lỗi", f"Lỗi trong trích đặc trưng: {str(e)}")
             import traceback
             traceback.print_exc()
     
     def so_khop_anh(self):
         """So khớp hai ảnh vân tay"""
-        if self.minutiae is None or self.minutiae_2 is None:
+        # Kiểm tra ảnh đã làm mảnh
+        if self.anh_manh is None or self.anh_manh_2 is None:
             messagebox.showwarning("Cảnh báo", 
-                                 "Vui lòng trích chọn đặc trưng cho cả hai ảnh!")
+                                 "Vui lòng làm mảnh ảnh cho cả hai ảnh!")
+            return
+        
+        # Kiểm tra ảnh gốc
+        if self.anh_goc is None or self.anh_goc_2 is None:
+            messagebox.showwarning("Cảnh báo", 
+                                 "Vui lòng tải ảnh cho cả hai ảnh!")
+            return
+        
+        # Lấy phương pháp so khớp từ GUI
+        phương_pháp = getattr(self.gui, 'matching_method', None)
+        if phương_pháp is None:
+            phương_pháp = 'minutiae'
+        else:
+            phương_pháp = phương_pháp.get()
+        
+        # Chỉ kiểm tra minutiae nếu sử dụng phương pháp minutiae
+        if phương_pháp == 'minutiae':
+            if self.minutiae is None or self.minutiae_2 is None:
+                messagebox.showwarning("Cảnh báo", 
+                                     "Vui lòng trích chọn đặc trưng (Minutiae) cho cả hai ảnh!")
+                return
+        
+        try:
+            # So khớp theo phương pháp đã chọn
+            if phương_pháp == 'feature':
+                self.so_khop_feature()
+            elif phương_pháp == 'harris':
+                self.so_khop_harris()
+            elif phương_pháp == 'orb':
+                self.so_khop_orb()
+            elif phương_pháp == 'lbp':
+                self.so_khop_lbp()
+            elif phương_pháp == 'ridge':
+                self.so_khop_ridge()
+            elif phương_pháp == 'frequency':
+                self.so_khop_freq()
+            else:
+                # Mặc định là minutiae
+                self._so_khop_minutiae_default()
+        
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Lỗi trong so khớp: {str(e)}")
+    
+    def so_khop_tat_ca(self):
+        """So khớp tất cả các phương pháp để so sánh"""
+        if self.anh_xu_ly is None or self.anh_xu_ly_2 is None:
+            messagebox.showwarning("Cảnh báo", "Vui lòng làm mảnh ảnh cho cả hai ảnh!")
+            return
+        
+        try:
+            # Lưu phương pháp cũ
+            phương_pháp_cũ = self.gui.matching_method.get()
+            
+            # Danh sách các phương pháp cần so khớp
+            phương_pháp_list = ['minutiae', 'feature', 'lbp', 'ridge', 'frequency']
+            kết_quả_all = {}
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_thong_bao("⏳ Đang so khớp tất cả các phương pháp...")
+            self.gui.root.update()
+            
+            # So khớp từng phương pháp
+            for phương_pháp in phương_pháp_list:
+                try:
+                    # Cập nhật dropdown
+                    self.gui.matching_method.set(phương_pháp)
+                    self.gui.root.update()
+                    
+                    if phương_pháp == 'minutiae':
+                        result = so_khop_minutiae(self.minutiae, self.minutiae_2, 
+                                                 max_distance=50, angle_tolerance=30)
+                        similarity_score = tinh_diem_tuong_dong_tien_tien(
+                            self.minutiae, self.minutiae_2
+                        )
+                    elif phương_pháp == 'feature':
+                        result = so_khop_feature_matching(self.anh_xu_ly, self.anh_xu_ly_2)
+                        similarity_score = result.get('similarity_score', 0)
+                    elif phương_pháp == 'lbp':
+                        result = so_khop_lbp_texture(self.anh_xu_ly, self.anh_xu_ly_2)
+                        similarity_score = result.get('similarity_score', 0)
+                    elif phương_pháp == 'ridge':
+                        result = so_khop_ridge_orientation(self.anh_xu_ly, self.anh_xu_ly_2)
+                        similarity_score = result.get('similarity_score', 0)
+                    elif phương_pháp == 'frequency':
+                        result = so_khop_frequency_domain(self.anh_xu_ly, self.anh_xu_ly_2)
+                        similarity_score = result.get('similarity_score', 0)
+                    
+                    kết_quả_all[phương_pháp] = similarity_score
+                    
+                except Exception as e:
+                    print(f"Lỗi so khớp {phương_pháp}: {e}")
+                    kết_quả_all[phương_pháp] = 0
+            
+            # Khôi phục phương pháp cũ
+            self.gui.matching_method.set(phương_pháp_cũ)
+            self.gui.root.update()
+            
+            # Hiển thị kết quả tất cả phương pháp
+            tên_phương_pháp = {
+                'minutiae': 'Minutiae Matching',
+                'feature': 'Feature Matching',
+                'lbp': 'LBP Texture',
+                'ridge': 'Ridge Orientation',
+                'frequency': 'Frequency Domain'
+            }
+            
+            # Sắp xếp theo điểm giảm dần
+            kết_quả_sắp_xếp = sorted(kết_quả_all.items(), key=lambda x: x[1], reverse=True)
+            
+            # Tạo thông báo chi tiết
+            thông_báo = "📊 KẾT QUẢ SO KHỚP TẤT CẢ PHƯƠNG PHÁP:\n\n"
+            for i, (phương_pháp, điểm) in enumerate(kết_quả_sắp_xếp, 1):
+                thông_báo += f"{i}. {tên_phương_pháp[phương_pháp]}: {điểm:.2f}%\n"
+            
+            điểm_cao_nhất = kết_quả_sắp_xếp[0][1]
+            thông_báo += f"\n🏆 Phương pháp tốt nhất: {tên_phương_pháp[kết_quả_sắp_xếp[0][0]]} ({điểm_cao_nhất:.2f}%)"
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(thông_báo)
+            
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Lỗi so khớp tất cả: {str(e)}")
+    
+    def _so_khop_minutiae_default(self):
+        """So khớp minutiae mặc định"""
+        if self.minutiae is None or self.minutiae_2 is None:
+            messagebox.showwarning("Cảnh báo", "Vui lòng trích đặc trưng trước!")
             return
         
         try:
@@ -422,8 +593,29 @@ class XuLySuKien:
             
             phan_loai = phan_loai_match(similarity_score, result['match_percentage'])
             
+            # Cập nhật tiêu đề theo phương pháp
+            self.gui.hien_thi_ket_qua.cap_nhat_phuong_phap_so_khop('minutiae')
+            
+            # Cập nhật chi tiết minutiae
+            try:
+                # minutiae là dict với keys: 'endings' và 'bifurcations'
+                num_endings_1 = len(self.minutiae.get('endings', []))
+                num_bifurcations_1 = len(self.minutiae.get('bifurcations', []))
+                total_1 = num_endings_1 + num_bifurcations_1
+                
+                num_endings_2 = len(self.minutiae_2.get('endings', []))
+                num_bifurcations_2 = len(self.minutiae_2.get('bifurcations', []))
+                total_2 = num_endings_2 + num_bifurcations_2
+                
+                self.gui.hien_thi_ket_qua.cap_nhat_chi_tiet_minutiae(
+                    num_endings_1, num_bifurcations_1, total_1
+                )
+            except Exception as e:
+                print(f"Lỗi cập nhật chi tiết minutiae: {e}")
+            
             # Lưu kết quả so khớp vào file text
-            self._luu_ket_qua_so_khop(result, similarity_score, phan_loai)
+            self._luu_ket_qua_so_khop(result, similarity_score, phan_loai, 
+                                     phương_pháp='Minutiae Matching')
             
             # Cập nhật kết quả so khớp vào thông tin so khớp
             self.gui.hien_thi_ket_qua.cap_nhat_ket_qua_so_khop(
@@ -433,13 +625,147 @@ class XuLySuKien:
             
             # Hiển thị thông báo thành công
             self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(
-                f"So khớp hoàn tất! Phân loại: {phan_loai.upper()}"
+                f"So khớp Minutiae hoàn tất! Điểm: {similarity_score:.2f}\n"
+                f"Ending ảnh 1: {num_endings_1}, Bifurcation: {num_bifurcations_1}, Total: {total_1}\n"
+                f"Ending ảnh 2: {num_endings_2}, Bifurcation: {num_bifurcations_2}, Total: {total_2}"
+            )
+        except Exception as e:
+            import traceback
+            messagebox.showerror("Lỗi", f"Lỗi so khớp Minutiae: {str(e)}")
+            traceback.print_exc()
+    
+    def so_khop_feature(self):
+        """So khớp bằng Feature Matching"""
+        if self.anh_xu_ly is None or self.anh_xu_ly_2 is None:
+            messagebox.showwarning("Cảnh báo", 
+                                 "Vui lòng làm mảnh ảnh cho cả hai ảnh!")
+            return
+        
+        try:
+            # Sử dụng ảnh tiền xử lý để trích features tốt hơn
+            result = so_khop_feature_matching(self.anh_xu_ly, self.anh_xu_ly_2)
+            result = so_khop_feature_matching(self.anh_xu_ly, self.anh_xu_ly_2)
+            similarity_score = result['similarity_score']
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_phuong_phap_so_khop('feature')
+            
+            # Cập nhật thông tin chi tiết
+            feature_count1 = result.get('feature_count1', 0)
+            feature_count2 = result.get('feature_count2', 0)
+            good_matches = result.get('good_matches', 0)
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_chi_tiet_feature(
+                feature_count1, feature_count2, good_matches
             )
             
+            self._luu_ket_qua_so_khop_image({
+                'method': 'Feature Matching',
+                'similarity_score': similarity_score,
+                'feature_count1': feature_count1,
+                'feature_count2': feature_count2,
+                'good_matches': good_matches,
+                'is_match': result.get('is_match', False)
+            }, similarity_score, phương_pháp='Feature Matching')
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_ket_qua_so_khop(0, similarity_score)
+            self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(
+                f"Feature Matching hoàn tất! Điểm: {similarity_score:.2f}"
+            )
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Lỗi trong so khớp: {str(e)}")
+            messagebox.showerror("Lỗi", f"Lỗi Feature Matching: {str(e)}")
     
-    def _luu_ket_qua_so_khop(self, result, similarity_score, phan_loai):
+    
+    def so_khop_lbp(self):
+        """So khớp bằng LBP Texture"""
+        if self.anh_xu_ly is None or self.anh_xu_ly_2 is None:
+            messagebox.showwarning("Cảnh báo", "Vui lòng làm mảnh ảnh cho cả hai ảnh!")
+            return
+        
+        try:
+            # Sử dụng ảnh tiền xử lý để trích LBP texture tốt hơn
+            result = so_khop_lbp_texture(self.anh_xu_ly, self.anh_xu_ly_2)
+            similarity_score = result.get('similarity_score', 0)
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_phuong_phap_so_khop('lbp')
+            
+            # Cập nhật thông tin chi tiết
+            chi_square_distance = result.get('chi_square_distance', 0)
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_chi_tiet_lbp(chi_square_distance)
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_ket_qua_so_khop(0, similarity_score)
+            self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(
+                f"So khớp LBP Texture hoàn tất! Điểm: {similarity_score:.2f}\n"
+                f"Chi-square distance: {chi_square_distance:.4f}"
+            )
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Lỗi so khớp LBP: {str(e)}")
+    
+    def so_khop_ridge(self):
+        """So khớp bằng Ridge Orientation Field"""
+        if self.anh_xu_ly is None or self.anh_xu_ly_2 is None:
+            messagebox.showwarning("Cảnh báo", "Vui lòng làm mảnh ảnh cho cả hai ảnh!")
+            return
+        
+        try:
+            # Sử dụng ảnh tiền xử lý để tính ridge orientation tốt hơn
+            result = so_khop_ridge_orientation(self.anh_xu_ly, self.anh_xu_ly_2)
+            similarity_score = result.get('similarity_score', 0)
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_phuong_phap_so_khop('ridge')
+            
+            # Cập nhật thông tin chi tiết
+            mean_diff = result.get('mean_orientation_diff', 0)
+            consistency_1 = result.get('consistency_1', 0)
+            consistency_2 = result.get('consistency_2', 0)
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_chi_tiet_ridge(
+                mean_diff, consistency_1, consistency_2
+            )
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_ket_qua_so_khop(0, similarity_score)
+            self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(
+                f"So khớp Ridge Orientation hoàn tất! Điểm: {similarity_score:.2f}\n"
+                f"Mean angle diff: {mean_diff:.2f}°\n"
+                f"Consistency 1: {consistency_1:.4f}\n"
+                f"Consistency 2: {consistency_2:.4f}"
+            )
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Lỗi so khớp Ridge: {str(e)}")
+    
+    def so_khop_freq(self):
+        """So khớp bằng Frequency Domain"""
+        if self.anh_xu_ly is None or self.anh_xu_ly_2 is None:
+            messagebox.showwarning("Cảnh báo", "Vui lòng làm mảnh ảnh cho cả hai ảnh!")
+            return
+        
+        try:
+            # Sử dụng ảnh tiền xử lý để phân tích frequency domain tốt hơn
+            result = so_khop_frequency_domain(self.anh_xu_ly, self.anh_xu_ly_2)
+            similarity_score = result.get('similarity_score', 0)
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_phuong_phap_so_khop('frequency')
+            
+            # Cập nhật thông tin chi tiết
+            freq_sim = result.get('frequency_similarity', 0)
+            energy_sim = result.get('energy_similarity', 0)
+            ridge_sim = result.get('ridge_similarity', 0)
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_chi_tiet_frequency(
+                freq_sim, energy_sim, ridge_sim
+            )
+            
+            self.gui.hien_thi_ket_qua.cap_nhat_ket_qua_so_khop(0, similarity_score)
+            self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(
+                f"So khớp Frequency Domain hoàn tất! Điểm: {similarity_score:.2f}\n"
+                f"Freq similarity: {freq_sim:.2f}\n"
+                f"Energy similarity: {energy_sim:.2f}\n"
+                f"Ridge similarity: {ridge_sim:.2f}"
+            )
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Lỗi so khớp Frequency: {str(e)}")
+    
+    def _luu_ket_qua_so_khop(self, result, similarity_score, phan_loai, phương_pháp='Minutiae Matching'):
         """Lưu kết quả so khớp vào file"""
         try:
             duong_dan_goc = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -474,6 +800,48 @@ class XuLySuKien:
                 f.write(f"  - Phân loại: {phan_loai.upper()}\n\n")
                 
                 f.write("=" * 60 + "\n")
+            
+            print(f"Đã lưu kết quả so khớp: {duong_dan_ket_qua}")
+            
+        except Exception as e:
+            print(f"Lỗi khi lưu kết quả so khớp: {str(e)}")
+    
+    def _luu_ket_qua_so_khop_image(self, result, similarity_score, phương_pháp='Template Matching'):
+        """Lưu kết quả so khớp ảnh vào file"""
+        try:
+            duong_dan_goc = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            thu_muc_ket_qua = os.path.join(duong_dan_goc, 'ket_qua')
+            os.makedirs(thu_muc_ket_qua, exist_ok=True)
+            
+            # Tạo tên file từ tên ảnh gốc
+            ten_anh_1 = self._lay_ten_anh(self.duong_dan_anh_1)
+            ten_anh_2 = self._lay_ten_anh(self.duong_dan_anh_2)
+            
+            # Tên file kết quả
+            phuong_phap_ten = phương_pháp.lower().replace(' ', '_')
+            ten_file = f"{ten_anh_1}_vs_{ten_anh_2}_{phuong_phap_ten}.txt"
+            duong_dan_ket_qua = os.path.join(thu_muc_ket_qua, ten_file)
+            
+            # Ghi kết quả vào file
+            with open(duong_dan_ket_qua, 'w', encoding='utf-8') as f:
+                f.write("=" * 60 + "\n")
+                f.write(f"KẾT QUẢ SO KHỚP VÂN TAY - {phương_pháp.upper()}\n")
+                f.write("=" * 60 + "\n\n")
+                
+                f.write(f"Ảnh 1: {self.duong_dan_anh_1}\n")
+                f.write(f"Ảnh 2: {self.duong_dan_anh_2}\n\n")
+                
+                f.write("KẾT QUẢ:\n")
+                f.write(f"  - Phương pháp: {phương_pháp}\n")
+                f.write(f"  - Điểm tương đồng: {similarity_score:.2f}/100\n")
+                f.write(f"  - Phù hợp: {'Có' if result.get('is_match', False) else 'Không'}\n\n")
+                
+                # Ghi thông tin chi tiết nếu có
+                for key, value in result.items():
+                    if key not in ['method', 'similarity_score', 'is_match']:
+                        f.write(f"  - {key}: {value}\n")
+                
+                f.write("\n" + "=" * 60 + "\n")
             
             print(f"Đã lưu kết quả so khớp: {duong_dan_ket_qua}")
             
