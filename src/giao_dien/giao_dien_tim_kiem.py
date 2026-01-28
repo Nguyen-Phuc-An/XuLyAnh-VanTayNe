@@ -271,8 +271,6 @@ class GiaoDienTimKiem:
             method_display = {
                 'minutiae': 'Minutiae Matching',
                 'feature': 'Feature Matching',
-                'harris': 'Harris Corners',
-                'orb': 'ORB Features',
                 'lbp': 'LBP Texture',
                 'ridge': 'Ridge Orientation',
                 'frequency': 'Frequency Domain'

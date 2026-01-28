@@ -213,229 +213,6 @@ def phan_loai_match(similarity_score, match_percentage):
     else:
         return 'non_match'
 
-def so_khop_template_matching(anh1, anh2, method=cv2.TM_CCOEFF_NORMED):
-    """
-    Phương pháp 1: Template Matching - So khớp ảnh bằng cross-correlation
-    
-    Args:
-        anh1 (np.ndarray): Ảnh vân tay 1 (ảnh binary)
-        anh2 (np.ndarray): Ảnh vân tay 2 (ảnh binary)
-        method (int): Phương pháp template matching từ OpenCV
-        
-    Returns:
-        dict: Kết quả so khớp với điểm tương đồng
-    """
-    if anh1 is None or anh2 is None or anh1.size == 0 or anh2.size == 0:
-        return {
-            'method': 'template_matching',
-            'similarity_score': 0.0,
-            'max_loc': None,
-            'is_match': False
-        }
-    
-    # Đảm bảo kích thước tương tự hoặc làm lại kích thước
-    if anh1.shape != anh2.shape:
-        anh2_resized = cv2.resize(anh2, (anh1.shape[1], anh1.shape[0]))
-    else:
-        anh2_resized = anh2.copy()
-    
-    # Chuẩn hóa ảnh về kiểu float32
-    anh1_float = anh1.astype(np.float32) / 255.0
-    anh2_float = anh2_resized.astype(np.float32) / 255.0
-    
-    # Tính template matching
-    try:
-        result = cv2.matchTemplate(anh1_float, anh2_float, method)
-        if result.size == 0:
-            max_val = 0.0
-        else:
-            max_val = np.max(result)
-    except:
-        max_val = 0.0
-    
-    # Chuyển điểm từ [-1, 1] hoặc [0, 1] về [0, 100]
-    similarity_score = max(0, min(100, max_val * 100))
-    
-    return {
-        'method': 'template_matching',
-        'similarity_score': similarity_score,
-        'raw_score': max_val,
-        'is_match': similarity_score > 50
-    }
-
-
-def so_khop_structural_similarity(anh1, anh2):
-    """
-    Phương pháp 2: Structural Similarity Index (SSIM)
-    Đo lường sự tương đồng cấu trúc giữa hai ảnh
-    
-    Args:
-        anh1 (np.ndarray): Ảnh vân tay 1
-        anh2 (np.ndarray): Ảnh vân tay 2
-        
-    Returns:
-        dict: Kết quả so khớp với SSIM score
-    """
-    if anh1 is None or anh2 is None or anh1.size == 0 or anh2.size == 0:
-        return {
-            'method': 'ssim',
-            'similarity_score': 0.0,
-            'ssim_value': 0.0,
-            'is_match': False
-        }
-    
-    # Đảm bảo cùng kích thước
-    if anh1.shape != anh2.shape:
-        anh2_resized = cv2.resize(anh2, (anh1.shape[1], anh1.shape[0]))
-    else:
-        anh2_resized = anh2.copy()
-    
-    try:
-        # Tính SSIM
-        ssim_value = metrics.structural_similarity(anh1, anh2_resized, 
-                                                   data_range=anh1.max() - anh1.min())
-        # Chuyển từ [-1, 1] về [0, 100]
-        similarity_score = max(0, min(100, (ssim_value + 1) * 50))
-    except:
-        similarity_score = 0.0
-        ssim_value = 0.0
-    
-    return {
-        'method': 'ssim',
-        'similarity_score': similarity_score,
-        'ssim_value': ssim_value,
-        'is_match': similarity_score > 50
-    }
-
-
-def so_khop_contour_matching(anh1, anh2):
-    """
-    Phương pháp 3: Contour Matching - So khớp dựa trên các đường viền
-    
-    Args:
-        anh1 (np.ndarray): Ảnh vân tay 1 (ảnh binary)
-        anh2 (np.ndarray): Ảnh vân tay 2 (ảnh binary)
-        
-    Returns:
-        dict: Kết quả so khớp dựa trên contours
-    """
-    if anh1 is None or anh2 is None or anh1.size == 0 or anh2.size == 0:
-        return {
-            'method': 'contour_matching',
-            'similarity_score': 0.0,
-            'contour_count1': 0,
-            'contour_count2': 0,
-            'is_match': False
-        }
-    
-    try:
-        # Đảm bảo cùng kích thước
-        if anh1.shape != anh2.shape:
-            anh2_resized = cv2.resize(anh2, (anh1.shape[1], anh1.shape[0]))
-        else:
-            anh2_resized = anh2.copy()
-        
-        # Tìm contours
-        contours1, _ = cv2.findContours(anh1.astype(np.uint8), 
-                                        cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        contours2, _ = cv2.findContours(anh2_resized.astype(np.uint8), 
-                                        cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        
-        if len(contours1) == 0 or len(contours2) == 0:
-            return {
-                'method': 'contour_matching',
-                'similarity_score': 0.0,
-                'contour_count1': len(contours1),
-                'contour_count2': len(contours2),
-                'is_match': False
-            }
-        
-        # So khớp từng contour
-        match_scores = []
-        for c1 in contours1[:10]:  # Giới hạn 10 contours để tăng tốc
-            for c2 in contours2[:10]:
-                score = cv2.matchShapes(c1, c2, cv2.CONTOURS_MATCH_I1, 0)
-                match_scores.append(score)
-        
-        # Tính điểm tương đồng từ kết quả matchShapes
-        # matchShapes trả về giá trị nhỏ hơn = tương đồng hơn
-        if match_scores:
-            avg_score = np.mean(match_scores)
-            # Chuyển từ [0, ∞] về [0, 100] (sử dụng exponential decay)
-            similarity_score = 100 * np.exp(-avg_score)
-        else:
-            similarity_score = 0.0
-        
-        return {
-            'method': 'contour_matching',
-            'similarity_score': max(0, min(100, similarity_score)),
-            'contour_count1': len(contours1),
-            'contour_count2': len(contours2),
-            'match_score': avg_score if match_scores else 0.0,
-            'is_match': similarity_score > 50
-        }
-    except Exception as e:
-        return {
-            'method': 'contour_matching',
-            'similarity_score': 0.0,
-            'error': str(e),
-            'is_match': False
-        }
-
-
-def so_khop_histogram_matching(anh1, anh2):
-    """
-    Phương pháp 4: Histogram Matching - So khớp dựa trên histogram
-    
-    Args:
-        anh1 (np.ndarray): Ảnh vân tay 1
-        anh2 (np.ndarray): Ảnh vân tay 2
-        
-    Returns:
-        dict: Kết quả so khớp dựa trên histogram
-    """
-    if anh1 is None or anh2 is None or anh1.size == 0 or anh2.size == 0:
-        return {
-            'method': 'histogram_matching',
-            'similarity_score': 0.0,
-            'correlation': 0.0,
-            'chi_square': 0.0,
-            'is_match': False
-        }
-    
-    try:
-        # Tính histogram cho cả hai ảnh
-        hist1 = cv2.calcHist([anh1], [0], None, [256], [0, 256])
-        hist2 = cv2.calcHist([anh2], [0], None, [256], [0, 256])
-        
-        # Chuẩn hóa histogram
-        hist1 = cv2.normalize(hist1, hist1).flatten()
-        hist2 = cv2.normalize(hist2, hist2).flatten()
-        
-        # Tính correlation coefficient
-        correlation = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
-        
-        # Chi-square distance
-        chi_square = cv2.compareHist(anh1, anh2, cv2.HISTCMP_CHISQRT)
-        
-        # Chuyển điểm về [0, 100]
-        similarity_score = correlation * 100
-        
-        return {
-            'method': 'histogram_matching',
-            'similarity_score': max(0, min(100, similarity_score)),
-            'correlation': correlation,
-            'chi_square': chi_square,
-            'is_match': similarity_score > 50
-        }
-    except Exception as e:
-        return {
-            'method': 'histogram_matching',
-            'similarity_score': 0.0,
-            'error': str(e),
-            'is_match': False
-        }
-
 
 def so_khop_feature_matching(anh1, anh2, use_sift=True):
     """
@@ -507,11 +284,15 @@ def so_khop_feature_matching(anh1, anh2, use_sift=True):
                         good_matches.append(m)
         
         # Tính similarity score dựa trên số lượng good matches
-        min_kp = min(len(kp1), len(kp2))
-        if min_kp > 0:
-            # Tỷ lệ match: số good matches chia cho số keypoints nhỏ nhất
-            match_ratio = len(good_matches) / min_kp
-            # Nếu 2 ảnh y chang nhau, match_ratio sẽ ~= 1.0
+        # Dùng tổng keypoints từ cả 2 ảnh làm căn cứ, không dùng min
+        total_kp = len(kp1) + len(kp2)
+        if total_kp > 0:
+            # Tỷ lệ match: số good matches chia cho tổng keypoints
+            # Nếu 2 ảnh y chang, số good matches ≈ min(len(kp1), len(kp2))
+            # Nên similarity ≈ min(len(kp1), len(kp2)) / (len(kp1) + len(kp2))
+            # Ví dụ: 2000 + 2000 kp, 2000 good match → 2000/4000 = 50%
+            # Nếu 2 ảnh khác, 2334 + 40 kp, 41 good match → 41/2374 = 1.7%
+            match_ratio = len(good_matches) / total_kp
             similarity_score = match_ratio * 100
         else:
             similarity_score = 0.0
@@ -522,8 +303,8 @@ def so_khop_feature_matching(anh1, anh2, use_sift=True):
             'feature_count1': len(kp1),
             'feature_count2': len(kp2),
             'good_matches': len(good_matches),
-            'match_ratio': match_ratio if min_kp > 0 else 0,
-            'is_match': len(good_matches) >= 5
+            'match_ratio': match_ratio if total_kp > 0 else 0,
+            'is_match': len(good_matches) >= 5 and similarity_score >= 30
         }
     except Exception as e:
         return {
@@ -552,13 +333,7 @@ def so_khop_thong_ke_toan_bo(minutiae1, minutiae2, anh1=None, anh2=None):
     }
     
     if anh1 is not None and anh2 is not None:
-        results['template_matching'] = so_khop_template_matching(anh1, anh2)
-        results['ssim'] = so_khop_structural_similarity(anh1, anh2)
-        results['contour_matching'] = so_khop_contour_matching(anh1, anh2)
-        results['histogram_matching'] = so_khop_histogram_matching(anh1, anh2)
         results['feature_matching'] = so_khop_feature_matching(anh1, anh2)
-        results['harris_corners'] = so_khop_harris_corners(anh1, anh2)
-        results['orb_features'] = so_khop_orb_features(anh1, anh2)
         results['lbp_texture'] = so_khop_lbp_texture(anh1, anh2)
         results['ridge_orientation'] = so_khop_ridge_orientation(anh1, anh2)
         results['frequency_domain'] = so_khop_frequency_domain(anh1, anh2)
@@ -584,138 +359,6 @@ def so_khop_thong_ke_toan_bo(minutiae1, minutiae2, anh1=None, anh2=None):
 # ============================================================================
 # CÁC PHƯƠNG PHÁP SO KHỚP BỔ SUNG CHO CÁC ĐẶC TRƯNG MỚI
 # ============================================================================
-
-def so_khop_harris_corners(anh1, anh2):
-    """
-    So khớp sử dụng Harris Corner Detection
-    Dựa vào số lượng và vị trí các corner points
-    
-    Args:
-        anh1 (np.ndarray): Ảnh 1
-        anh2 (np.ndarray): Ảnh 2
-        
-    Returns:
-        dict: Kết quả so khớp
-    """
-    from trich_dac_trung.trich_dac_trung_chi_tiet import trich_harris_corners
-    
-    # Convert to grayscale if needed
-    if len(anh1.shape) == 3:
-        anh1_gray = cv2.cvtColor(anh1, cv2.COLOR_BGR2GRAY)
-    else:
-        anh1_gray = anh1
-    
-    if len(anh2.shape) == 3:
-        anh2_gray = cv2.cvtColor(anh2, cv2.COLOR_BGR2GRAY)
-    else:
-        anh2_gray = anh2
-    
-    features1 = trich_harris_corners(anh1_gray)
-    features2 = trich_harris_corners(anh2_gray)
-    
-    count1 = features1.get('corner_count', 0)
-    count2 = features2.get('corner_count', 0)
-    corners1 = features1.get('corners', np.array([]))
-    corners2 = features2.get('corners', np.array([]))
-    
-    # So khớp corner positions
-    matched_corners = 0
-    if count1 > 0 and count2 > 0 and len(corners1) > 0 and len(corners2) > 0:
-        try:
-            # Tính khoảng cách giữa corners
-            from scipy.spatial.distance import cdist
-            distances = cdist(corners1[:, :2], corners2[:, :2])
-            
-            # Tìm matches trong bán kính 30 pixel
-            matches = np.where(distances < 30)
-            matched_corners = len(np.unique(matches[0]))
-        except:
-            matched_corners = 0
-    
-    # Tính similarity score dựa trên matched corners
-    if count1 == 0 or count2 == 0:
-        similarity = 0.0
-    else:
-        min_count = min(count1, count2)
-        if min_count > 0 and matched_corners > 0:
-            # Tỷ lệ match: số matched corners chia cho số corners nhỏ nhất
-            match_ratio = matched_corners / min_count
-            similarity = match_ratio * 100
-        else:
-            similarity = 0.0
-    
-    return {
-        'method': 'Harris Corners',
-        'similarity_score': min(100, similarity),
-        'corner_count_1': count1,
-        'corner_count_2': count2
-    }
-
-
-def so_khop_orb_features(anh1, anh2):
-    """
-    So khớp sử dụng ORB Features
-    Sử dụng Hamming distance giữa các descriptors
-    
-    Args:
-        anh1 (np.ndarray): Ảnh 1
-        anh2 (np.ndarray): Ảnh 2
-        
-    Returns:
-        dict: Kết quả so khớp
-    """
-    from trich_dac_trung.trich_dac_trung_chi_tiet import trich_orb_features
-    
-    # Convert to grayscale if needed
-    if len(anh1.shape) == 3:
-        anh1_gray = cv2.cvtColor(anh1, cv2.COLOR_BGR2GRAY)
-    else:
-        anh1_gray = anh1
-    
-    if len(anh2.shape) == 3:
-        anh2_gray = cv2.cvtColor(anh2, cv2.COLOR_BGR2GRAY)
-    else:
-        anh2_gray = anh2
-    
-    features1 = trich_orb_features(anh1_gray)
-    features2 = trich_orb_features(anh2_gray)
-    
-    desc1 = features1.get('orb_descriptors')
-    desc2 = features2.get('orb_descriptors')
-    
-    if desc1 is None or desc2 is None or len(desc1) == 0 or len(desc2) == 0:
-        similarity = 0.0
-        matched_count = 0
-    else:
-        # Sử dụng BFMatcher với Hamming distance
-        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
-        matches = bf.knnMatch(desc1, desc2, k=2)
-        
-        # Lowe's ratio test
-        good_matches = []
-        if matches is not None:
-            for match_pair in matches:
-                if len(match_pair) == 2:
-                    m, n = match_pair
-                    if m.distance < 0.7 * n.distance:  # Tighter threshold
-                        good_matches.append(m)
-        
-        matched_count = len(good_matches)
-        min_keypoints = min(len(desc1), len(desc2))
-        
-        # Tính tỉ lệ match dựa trên số descriptors nhỏ nhất
-        if min_keypoints > 0 and matched_count > 0:
-            similarity = (matched_count / min_keypoints) * 100
-        else:
-            similarity = 0.0
-    
-    return {
-        'method': 'ORB Features',
-        'similarity_score': min(similarity, 100),
-        'matched_count': matched_count,
-        'keypoints_1': features1.get('keypoint_count', 0),
-        'keypoints_2': features2.get('keypoint_count', 0)
-    }
 
 
 def so_khop_lbp_texture(anh1, anh2):
@@ -758,8 +401,12 @@ def so_khop_lbp_texture(anh1, anh2):
     
     # Chuyển đổi thành similarity score (0-100)
     # Chi-square nhỏ = hình giống nhau
-    # Nếu chi_square gần 0, similarity gần 100
-    similarity = 100 / (1 + chi_square)
+    # Chi-square thường trong khoảng 0-2 đối với 2 ảnh khác nhau
+    # Sử dụng exponential decay thay vì linear
+    # similarity = 100 * exp(-chi_square / 2)
+    # Nếu chi_square = 0 → similarity = 100
+    # Nếu chi_square = 2 → similarity ≈ 37
+    similarity = 100 * np.exp(-chi_square / 2)
     
     return {
         'method': 'LBP Texture',
@@ -818,7 +465,12 @@ def so_khop_ridge_orientation(anh1, anh2):
     # Chuyển đổi thành similarity (0-100)
     # Nếu mean_diff nhỏ (gần 0) thì similarity cao
     # Max mean_diff là 90 độ
-    similarity = max(0, 100 - (mean_diff * 100 / 90))
+    # Sử dụng exponential decay thay vì linear
+    # similarity = 100 * exp(-mean_diff / 45)
+    # Nếu mean_diff = 0 → similarity = 100
+    # Nếu mean_diff = 45 → similarity ≈ 37
+    # Nếu mean_diff = 90 → similarity ≈ 14
+    similarity = 100 * np.exp(-mean_diff / 45)
     
     return {
         'method': 'Ridge Orientation',
@@ -860,17 +512,18 @@ def so_khop_frequency_domain(anh1, anh2):
     energy_diff = abs(features1['energy_concentration'] - features2['energy_concentration'])
     ridge_freq_diff = abs(features1['ridge_frequency'] - features2['ridge_frequency'])
     
-    # Tính similarity dựa trên các đặc trưng
-    # Frequency diff: max là ~50Hz, nếu diff=0 thì similarity=100
-    freq_similarity = max(0, 100 - freq_diff * 2)
+    # Tính similarity dựa trên các đặc trưng với exponential decay
+    # Frequency diff: max là ~50Hz
+    freq_similarity = 100 * np.exp(-freq_diff / 25)
     
-    # Energy diff: max là ~1.0, nếu diff=0 thì similarity=100
-    energy_similarity = max(0, 100 - abs(energy_diff * 100))
+    # Energy diff: max là ~1.0
+    energy_similarity = 100 * np.exp(-abs(energy_diff) * 5)
     
-    # Ridge frequency diff: max là ~0.5, nếu diff=0 thì similarity=100
-    ridge_similarity = max(0, 100 - ridge_freq_diff * 100)
+    # Ridge frequency diff: max là ~0.5
+    ridge_similarity = 100 * np.exp(-ridge_freq_diff * 20)
     
-    # Lấy trung bình
+    # Lấy trung bình, nhưng yêu cầu tất cả 3 đặc trưng phải tương đồng
+    # Nếu 1 đặc trưng quá khác nhau → similarity sẽ bị hạ
     overall_similarity = (freq_similarity + energy_similarity + ridge_similarity) / 3
     overall_similarity = min(overall_similarity, 100)
     

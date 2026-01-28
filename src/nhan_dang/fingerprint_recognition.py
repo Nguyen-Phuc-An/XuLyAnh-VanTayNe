@@ -7,7 +7,6 @@ import os
 from database.database_manager import DatabaseManager
 from so_khop.so_khop_van_tay import (
     so_khop_minutiae, so_khop_feature_matching,
-    so_khop_harris_corners, so_khop_orb_features,
     so_khop_lbp_texture, so_khop_ridge_orientation,
     so_khop_frequency_domain
 )
@@ -45,8 +44,6 @@ class FingerprintRecognition:
         method_thresholds = {
             'minutiae': 70.0,
             'feature': 50.0,
-            'harris': 50.0,
-            'orb': 50.0,
             'lbp': 50.0,
             'ridge': 50.0,
             'frequency': 50.0

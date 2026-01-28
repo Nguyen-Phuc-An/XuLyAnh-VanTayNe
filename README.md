@@ -2,27 +2,24 @@
 
 Một hệ thống nhận dạng vân tay hoàn chỉnh được xây dựng bằng Python và OpenCV, với giao diện người dùng thân thiện và hệ thống cơ sở dữ liệu MySQL tích hợp.
 
-## 📋 Mục tiêu dự án
+## Mục tiêu dự án
 
 Xây dựng một hệ thống có khả năng:
 - Chuyển ảnh gốc sang ảnh xám
 - Chuẩn hóa và tăng cường ảnh (lọc nhiễu, Gabor filter)
 - Nhị phân hóa và làm mảnh ảnh vân tay
-- **Trích chọn đặc trưng với 6 phương pháp:**
+- **Trích chọn đặc trưng với 5 phương pháp:**
   - Minutiae chi tiết (ending, bifurcation)
-  - Harris Corner Detection
-  - ORB Features
   - LBP (Local Binary Pattern)
   - Ridge Orientation Field
   - Frequency Domain Analysis
-- **So khớp 2 mẫu vân tay với 7 phương pháp:**
-  - Minutiae Matching (mặc định)
-  - Feature Matching (SIFT/ORB)
-  - Harris Corner Matching
-  - ORB Features Matching
-  - LBP Texture Matching
-  - Ridge Orientation Matching
-  - Frequency Domain Matching
+  - Feature Matching (SIFT/ORB fallback)
+- **So khớp 2 mẫu vân tay với 5 phương pháp:**
+  - Minutiae Matching (so khớp minutiae points)
+  - Feature Matching (SIFT/ORB features)
+  - LBP Texture Matching (so sánh histogram)
+  - Ridge Orientation Matching (so sánh hướng sọc)
+  - Frequency Domain Matching (phân tích tần số)
 - **Lưu trữ người dùng và vân tay trong MySQL database (xla_vantay)**
 - **Nhận dạng người dùng từ ảnh vân tay**
 - **Hiển thị thông tin người dùng tương ứng**
@@ -89,7 +86,7 @@ XuLyAnh-VanTayNe/
 └── README.md                          # File này
 ```
 
-## 🔧 Công nghệ sử dụng
+## Công nghệ sử dụng
 
 - **Python 3.7+**
 - **OpenCV (cv2)** - Xử lý ảnh
@@ -101,7 +98,7 @@ XuLyAnh-VanTayNe/
 - **MySQL Connector** - Kết nối MySQL database
 - **MySQL Workbench** - Quản lý database (tùy chọn)
 
-## 📦 Cài đặt
+## Cài đặt
 
 ### 1. Cài đặt Python
 Đảm bảo bạn đã cài đặt Python 3.7 hoặc cao hơn.
@@ -131,7 +128,7 @@ source database/schema.sql
 # Hoặc copy toàn bộ nội dung file schema.sql và paste vào MySQL
 ```
 
-## 🚀 Hướng dẫn sử dụng
+## Hướng dẫn sử dụng
 
 ### 1. Chạy chương trình
 ```bash
@@ -141,11 +138,11 @@ python src/chuong_trinh_chinh.py
 ### 2. Các bước xử lý ảnh
 
 #### Bước 1: Chọn ảnh
-- Click nút "📁 Chọn ảnh 1" hoặc "📁 Chọn ảnh 2"
+- Click nút "Chọn ảnh 1" hoặc "Chọn ảnh 2"
 - Chọn file ảnh vân tay (.jpg, .png, .bmp)
 
 #### Bước 2: Tiền xử lý
-- Click nút "🔧 Tiền xử lý"
+- Click nút "Tiền xử lý"
 - Hệ thống sẽ:
   - Chuyển ảnh sang xám
   - Chuẩn hóa ảnh (CLAHE)
@@ -153,53 +150,51 @@ python src/chuong_trinh_chinh.py
   - Tăng cường ảnh (Gabor filter)
 
 #### Bước 3: Nhị phân hóa
-- Click nút "⚫ Nhị phân hóa"
+- Click nút "Nhị phân hóa"
 - Sử dụng phương pháp Otsu tự động tìm ngưỡng
 
 #### Bước 4: Làm mảnh ảnh
-- Click nút "✏️ Làm mảnh"
+- Click nút "Làm mảnh"
 - Sử dụng thuật toán Zhang-Suen
 - Tự động loại bỏ nhiễu nhỏ
 
 #### Bước 5: Trích chọn đặc trưng
-- Click nút "🔍 Trích đặc trưng"
-- **6 phương pháp trích đặc trưng:**
+- Click nút "Trích đặc trưng"
+- **5 phương pháp trích đặc trưng:**
   1. **Minutiae** - Crossing Number (ending, bifurcation)
-  2. **Harris Corners** - Phát hiện điểm góc/tâm
-  3. **ORB Features** - ORB keypoints & descriptors
-  4. **LBP** - Local Binary Pattern (texture)
-  5. **Ridge Orientation** - Phân tích hướng đuôi
-  6. **Frequency Domain** - Phân tích tần số
+  2. **LBP** - Local Binary Pattern (texture)
+  3. **Ridge Orientation** - Phân tích hướng đuôi
+  4. **Frequency Domain** - Phân tích tần số
+  5. **Feature Matching** - SIFT hoặc ORB features
 
 #### Bước 6: So khớp
 - Click dropdown "So khớp" để chọn phương pháp
-- **7 tùy chọn:**
+- **5 tùy chọn:**
   1. **Minutiae Matching** - So khớp minutiae points
   2. **Feature Matching** - SIFT/ORB features
-  3. **Harris Matching** - Harris corner points
-  4. **ORB Matching** - ORB descriptors (Hamming distance)
-  5. **LBP Matching** - LBP histogram comparison
-  6. **Ridge Matching** - Ridge orientation fields
-  7. **Frequency Matching** - Frequency domain characteristics
+  3. **LBP Matching** - LBP histogram comparison
+  4. **Ridge Matching** - Ridge orientation fields
+  5. **Frequency Matching** - Frequency domain characteristics
 
-- Click nút "⚖️ Thực hiện"
+- Click nút "Thực hiện"
 - Xem kết quả so khớp
+- **Chú ý**: Nếu "Khớp" thấp (<10%) nhưng "Tương đồng" cao (>70%), hệ thống sẽ hiển thị dòng cảnh báo: "Cảnh báo: Khớp thấp nhưng tương đồng cao - 2 ảnh có cơ cấu tương tự nhưng có thể khác nhau"
 
 #### Bước 7 (Tùy chọn): Nhận dạng từ Database
 - Trước tiên phải kết nối MySQL database (xla_vantay)
-- Sử dụng tab "🔍 Tìm Kiếm Người Dùng"
+- Sử dụng tab "Tìm Kiếm Người Dùng"
 - Chọn ảnh vân tay và phương pháp so khớp
 - Hệ thống tự động tìm người dùng tương ứng
 - Hiển thị thông tin người dùng nếu tìm thấy
 
 #### Bước 8 (Tùy chọn): Đăng ký người dùng mới
-- Sử dụng tab "📝 Đăng Ký Người Dùng"
+- Sử dụng tab "Đăng Ký Người Dùng"
 - Nhập thông tin: Username, Họ tên, Email, Số ĐT, CCCD, Chức vụ, Phòng ban
 - Chọn ảnh vân tay
 - Tự động xử lý ảnh và trích đặc trưng
-- Click "✅ Đăng Ký" để lưu vào database
+- Click "Đăng Ký" để lưu vào database
 
-## 📊 Thông số kỹ thuật
+## Thông số kỹ thuật
 
 ### Tiền xử lý
 - **CLAHE**: clipLimit=2.0, tileGridSize=(8,8)
@@ -213,7 +208,7 @@ python src/chuong_trinh_chinh.py
 - **Thuật toán**: Zhang-Suen
 - **Lọc noise**: Loại bỏ đường dài < 3 pixels
 
-### Trích chọn đặc trưng - 6 phương pháp
+### Trích chọn đặc trưng - 5 phương pháp
 
 #### 1. Minutiae Features
 - **Phương pháp**: Crossing Number
@@ -222,73 +217,63 @@ python src/chuong_trinh_chinh.py
   - **Bifurcation**: CN = 3
 - **Lọc**: Loại bỏ điểm cách nhau < 5 pixels
 
-#### 2. Harris Corner Detection
-- Phát hiện điểm góc/tâm
-- Auto-correlation matrix
-- Non-maximal suppression
-
-#### 3. ORB Features
-- Oriented FAST and Rotated BRIEF
-- Keypoints cùng descriptors
-- Rotation invariant
-
-#### 4. LBP (Local Binary Pattern)
+#### 2. LBP (Local Binary Pattern)
 - Texture analysis
 - Mỗi pixel so sánh với 8 hàng xóm
 - Histogram đặc tính
 
-#### 5. Ridge Orientation Field
+#### 3. Ridge Orientation Field
 - Tính toán hướng ridge tại mỗi điểm
 - Gradient-based method
 - Consistency measurement
 
-#### 6. Frequency Domain Features
+#### 4. Frequency Domain Features
 - FFT analysis
 - Ridge frequency extraction
 - Energy characteristics
 
-### So khớp - 7 phương pháp
+#### 5. Feature Matching
+- SIFT hoặc ORB features
+- Keypoint detection
+- Descriptor matching
+
+### So khớp - 5 phương pháp
 
 #### 1. Minutiae Matching
 - Khoảng cách tối đa: 50 pixels
 - Độ chịu lệch hướng: ±30 độ
 - Dựa trên vị trí và hướng minutiae
+- Tính "Khớp %" dựa trên số minutiae match
 
 #### 2. Feature Matching
 - Phát hiện SIFT hoặc ORB features
-- KNN matching với Lowe's ratio test
-- Ratio: 0.7
 
-#### 3. Harris Corner Matching
-- Detect corners từ cả 2 ảnh
-- Spatial proximity matching
-- Euclidean distance based
+- **Cải tiến**: Tính similarity từ `good_matches / total_keypoints` thay vì `good_matches / min_keypoints`
+- Cách này công bằng hơn khi 2 ảnh có số keypoints khác biệt lớn
 
-#### 4. ORB Features Matching
-- ORB keypoints & Hamming distance
-- Matched count scoring
-- Higher match count = higher score
-
-#### 5. LBP Texture Matching
+#### 3. LBP Texture Matching
 - LBP histogram comparison
 - Chi-square distance
-- Normalized to 0-100 scale
+- **Cải tiến**: Sử dụng exponential decay `exp(-chi_square/2)` thay vì `100/(1+chi_square)`
+- Hạn chế điểm cao khi chi_square nhỏ do trùng hợp
 
-#### 6. Ridge Orientation Matching
-- Compare orientation fields
+#### 4. Ridge Orientation Matching
+- So sánh orientation fields từ cả 2 ảnh
 - Mean orientation difference
-- Consistency similarity
+- **Cải tiến**: Sử dụng exponential decay `exp(-mean_diff/45)` thay vì linear
+- Tránh cho điểm cao khi góc khác nhau chỉ 5-10 độ
 
-#### 7. Frequency Domain Matching
-- FFT magnitude comparison
+#### 5. Frequency Domain Matching
+- FFT analysis
 - Ridge frequency similarity
 - Energy similarity
-- Robust với biến dạng
+- **Cải tiến**: Sử dụng exponential decay cho từng thành phần
+- Chỉ cho điểm cao nếu **TẤT CẢ** đặc trưng tần số tương đồng
 
-#### 7. Comprehensive Matching
-- Kết hợp tất cả 6 phương pháp trên
-- Tính điểm trung bình, cao nhất, thấp nhất
-- Độ chính xác cao nhất
+### Cảnh báo Consistency
+- **Điều kiện**: Khớp < 10% nhưng Tương đồng > 70%
+- **Ý nghĩa**: 2 ảnh có cơ cấu tương tự nhưng có thể là vân tay của 2 người khác nhau
+- **Hành động**: Hiển thị dòng cảnh báo màu cam giúp người dùng nhận biết
 
 ### Database MySQL
 
@@ -400,13 +385,11 @@ so_khop_minutiae(minutiae1, minutiae2)           # So khớp minutiae
 tinh_diem_tuong_dong_tien_tien(m1, m2)          # Điểm nâng cao
 phan_loai_match(score, percentage)              # Phân loại
 
-# Phương pháp mới (6 phương pháp)
-so_khop_template_matching(anh1, anh2)           # Template Matching
-so_khop_structural_similarity(anh1, anh2)       # SSIM
-so_khop_contour_matching(anh1, anh2)            # Contour
-so_khop_histogram_matching(anh1, anh2)          # Histogram
-so_khop_feature_matching(anh1, anh2)            # Feature (SIFT/ORB)
-so_khop_thong_ke_toan_bo(m1, m2, anh1, anh2)   # Comprehensive
+# Phương pháp chính sử dụng (5 phương pháp)
+so_khop_feature_matching(anh1, anh2)            # Feature Matching
+so_khop_lbp_texture(anh1, anh2)                 # LBP Texture
+so_khop_ridge_orientation(anh1, anh2)           # Ridge Orientation
+so_khop_frequency_domain(anh1, anh2)            # Frequency Domain
 ```
 
 ### database_manager.py
@@ -440,29 +423,36 @@ recognition.save_match_record(...)
 
 ## 📝 Ví dụ sử dụng lập trình
 
-### Ví dụ 1: So khớp ảnh với 6 phương pháp mới
+### Ví dụ 1: So khớp ảnh với 5 phương pháp chính
 ```python
 from src.so_khop.so_khop_van_tay import (
-    so_khop_template_matching, so_khop_structural_similarity,
-    so_khop_contour_matching, so_khop_histogram_matching,
-    so_khop_feature_matching, so_khop_thong_ke_toan_bo
+    so_khop_feature_matching,
+    so_khop_lbp_texture,
+    so_khop_ridge_orientation,
+    so_khop_frequency_domain,
+    so_khop_minutiae
 )
 
-# Template Matching
-result = so_khop_template_matching(anh1, anh2)
-print(f"Template: {result['similarity_score']:.2f}")
-
-# SSIM
-result = so_khop_structural_similarity(anh1, anh2)
-print(f"SSIM: {result['similarity_score']:.2f}")
+# Minutiae Matching
+result = so_khop_minutiae(minutiae1, minutiae2)
+print(f"Minutiae: {result['match_percentage']:.2f}%")
 
 # Feature Matching
 result = so_khop_feature_matching(anh1, anh2)
-print(f"Features: {result['good_matches']} matches")
+print(f"Features: {result['similarity_score']:.2f}")
 
-# Comprehensive (all methods)
-results = so_khop_thong_ke_toan_bo(minutiae1, minutiae2, anh1, anh2)
-print(f"Overall: {results['overall_score']:.2f}")
+# LBP Texture
+from src.so_khop.so_khop_van_tay import so_khop_lbp_texture
+result = so_khop_lbp_texture(anh1, anh2)
+print(f"LBP: {result['similarity_score']:.2f}")
+
+# Ridge Orientation
+result = so_khop_ridge_orientation(anh1, anh2)
+print(f"Ridge: {result['similarity_score']:.2f}")
+
+# Frequency Domain
+result = so_khop_frequency_domain(anh1, anh2)
+print(f"Frequency: {result['similarity_score']:.2f}")
 ```
 
 ### Ví dụ 2: Làm việc với Database MySQL

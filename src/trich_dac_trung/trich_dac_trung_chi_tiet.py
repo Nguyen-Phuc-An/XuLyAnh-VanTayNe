@@ -1,6 +1,6 @@
 """
 Module trích chọn đặc trưng chi tiết
-Bao gồm: Minutiae, Harris Corners, ORB, LBP, Ridge Orientation, Frequency Domain
+Bao gồm: Minutiae, LBP, Ridge Orientation, Frequency Domain
 """
 
 import numpy as np
@@ -238,88 +238,6 @@ def loc_nhieu_minutiae(endings, bifurcations, min_distance=2):
     return endings_filtered, bifurcations_filtered
 
 
-# ============================================================================
-# PHƯƠNG PHÁP TRÍCH CHỌN ĐẶC TRƯNG BỔ SUNG
-# ============================================================================
-
-def trich_harris_corners(anh_input):
-    """
-    Trích chọn đặc trưng sử dụng Harris Corner Detection
-    Phát hiện các góc và điểm quan trọng trong ảnh vân tay
-    
-    Args:
-        anh_input (np.ndarray): Ảnh vân tay đầu vào
-        
-    Returns:
-        dict: Dictionary chứa danh sách corner points với hướng
-    """
-    # Chuẩn hóa ảnh
-    anh_uint8 = cv2.normalize(anh_input, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    
-    # Áp dụng Harris corner detection
-    corners = cv2.cornerHarris(anh_uint8, blockSize=2, ksize=3, k=0.04)
-    corners = cv2.dilate(corners, None)
-    
-    # Tìm các corner points
-    threshold = 0.01 * corners.max()
-    corner_points = np.where(corners > threshold)
-    
-    features = {
-        'harris_corners': [],
-        'corner_count': len(corner_points[0])
-    }
-    
-    for i, j in zip(corner_points[0], corner_points[1]):
-        corner_strength = float(corners[i, j])
-        huong = np.degrees(np.arctan2(
-            anh_uint8[max(0, i-1):min(anh_uint8.shape[0], i+2), j].sum(),
-            anh_uint8[i, max(0, j-1):min(anh_uint8.shape[1], j+2)].sum()
-        )) % 360
-        
-        features['harris_corners'].append({
-            'position': (i, j),
-            'strength': corner_strength,
-            'orientation': huong
-        })
-    
-    return features
-
-
-def trich_orb_features(anh_input):
-    """
-    Trích chọn đặc trưng sử dụng ORB (Oriented FAST and Rotated BRIEF)
-    Nhanh và hiệu quả cho nhận dạng vân tay real-time
-    
-    Args:
-        anh_input (np.ndarray): Ảnh vân tay đầu vào
-        
-    Returns:
-        dict: Dictionary chứa danh sách ORB keypoints
-    """
-    # Chuẩn hóa ảnh
-    anh_uint8 = cv2.normalize(anh_input, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    
-    # Khởi tạo ORB detector
-    orb = cv2.ORB_create(nfeatures=500)
-    
-    # Phát hiện keypoints và tính toán descriptors
-    keypoints, descriptors = orb.detectAndCompute(anh_uint8, None)
-    
-    features = {
-        'orb_keypoints': [],
-        'orb_descriptors': descriptors,
-        'keypoint_count': len(keypoints)
-    }
-    
-    for kp in keypoints:
-        features['orb_keypoints'].append({
-            'position': (int(kp.pt[1]), int(kp.pt[0])),  # (row, col)
-            'size': kp.size,
-            'angle': kp.angle,
-            'response': kp.response
-        })
-    
-    return features
 
 
 def trich_lbp_features(anh_input, radius=1, n_points=8):

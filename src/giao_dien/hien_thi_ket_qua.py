@@ -256,6 +256,10 @@ class HienThiKetQua:
         self.label_similarity = ttk.Label(frame_match_content, text="Tương đồng: N/A", foreground='#1abc9c')
         self.label_similarity.pack(anchor=tk.W, pady=3)
         
+        # Label cảnh báo nếu Khớp thấp nhưng Tương đồng cao
+        self.label_warning = ttk.Label(frame_match_content, text="", foreground='#ff6600')
+        self.label_warning.pack(anchor=tk.W, pady=2)
+        
         # Thông báo thành công - Card style
         frame_notification = ttk.Frame(self.frame_info, style='Card.TFrame')
         frame_notification.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
@@ -419,6 +423,15 @@ class HienThiKetQua:
         """Cập nhật kết quả so khớp"""
         self.label_match.config(text=f"Khớp: {match_percentage:.1f}%")
         self.label_similarity.config(text=f"Tương đồng: {similarity_score:.1f}/100")
+        
+        # Kiểm tra consistency: nếu Khớp thấp nhưng Tương đồng cao
+        # → 2 ảnh có thể khác nhau nhưng có cơ cấu tương tự
+        if match_percentage < 10 and similarity_score > 70:
+            self.label_warning.config(
+                text="Cảnh báo: Khớp thấp nhưng tương đồng cao - 2 ảnh có cơ cấu tương tự nhưng có thể khác nhau"
+            )
+        else:
+            self.label_warning.config(text="")
     
     def cap_nhat_phuong_phap_so_khop(self, phương_pháp):
         """Cập nhật tiêu đề và ẩn/hiển thị labels theo phương pháp matching"""

@@ -24,7 +24,7 @@ from trich_dac_trung.ve_dac_trung import ve_minutiae_tren_anh, ve_minutiae_chi_t
 from so_khop.so_khop_van_tay import (
     so_khop_minutiae, tinh_diem_tuong_dong_tien_tien, phan_loai_match,
     so_khop_feature_matching,
-    so_khop_harris_corners, so_khop_orb_features, so_khop_lbp_texture,
+    so_khop_lbp_texture,
     so_khop_ridge_orientation, so_khop_frequency_domain
 )
 
@@ -481,10 +481,6 @@ class XuLySuKien:
             # So khớp theo phương pháp đã chọn
             if phương_pháp == 'feature':
                 self.so_khop_feature()
-            elif phương_pháp == 'harris':
-                self.so_khop_harris()
-            elif phương_pháp == 'orb':
-                self.so_khop_orb()
             elif phương_pháp == 'lbp':
                 self.so_khop_lbp()
             elif phương_pháp == 'ridge':
