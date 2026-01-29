@@ -1,0 +1,17 @@
+============================================================
+KẾT QUẢ SO KHỚP VÂN TAY - FEATURE MATCHING
+============================================================
+
+Ảnh 1: D:/vt-an-cai1.jpg
+Ảnh 2: D:/vt-an-cai2.jpg
+
+KẾT QUẢ:
+  - Phương pháp: Feature Matching
+  - Điểm tương đồng: 0.00/100
+  - Phù hợp: Không
+
+  - feature_count1: 0
+  - feature_count2: 0
+  - good_matches: 0
+
+============================================================

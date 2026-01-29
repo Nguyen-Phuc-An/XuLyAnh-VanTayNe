@@ -30,26 +30,68 @@ class HienThiKetQua:
         self.notebook = ttk.Notebook(frame_anh_container)
         self.notebook.pack(fill=tk.BOTH, expand=True)
         
-        # Tab 1: Ảnh gốc
+        # Tab 1: Ảnh gốc (Hiển thị cả 2 ảnh)
         tab_anh_goc = ttk.Frame(self.notebook)
         self.notebook.add(tab_anh_goc, text="Ảnh gốc")
-        self.canvas_anh_goc = tk.Canvas(tab_anh_goc, bg="#2b2b2b", highlightthickness=0)
-        self.canvas_anh_goc.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        frame_2_anh_goc = ttk.Frame(tab_anh_goc)
+        frame_2_anh_goc.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        frame_anh_goc_1 = ttk.LabelFrame(frame_2_anh_goc, text="Ảnh 1", padding=5)
+        frame_anh_goc_1.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=3)
+        
+        self.canvas_anh_goc = tk.Canvas(frame_anh_goc_1, bg="#2b2b2b", highlightthickness=0)
+        self.canvas_anh_goc.pack(fill=tk.BOTH, expand=True)
         self.image_anh_goc = None
         
-        # Tab 2: Ảnh sau xử lý
+        frame_anh_goc_2 = ttk.LabelFrame(frame_2_anh_goc, text="Ảnh 2", padding=5)
+        frame_anh_goc_2.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=3)
+        
+        self.canvas_anh_goc_2 = tk.Canvas(frame_anh_goc_2, bg="#2b2b2b", highlightthickness=0)
+        self.canvas_anh_goc_2.pack(fill=tk.BOTH, expand=True)
+        self.image_anh_goc_2 = None
+        
+        # Tab 2: Ảnh sau xử lý (Hiển thị cả 2 ảnh)
         tab_anh_sau = ttk.Frame(self.notebook)
         self.notebook.add(tab_anh_sau, text="Sau xử lý")
-        self.canvas_anh_sau = tk.Canvas(tab_anh_sau, bg="#2b2b2b", highlightthickness=0)
-        self.canvas_anh_sau.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        frame_2_anh_sau = ttk.Frame(tab_anh_sau)
+        frame_2_anh_sau.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        frame_anh_sau_1 = ttk.LabelFrame(frame_2_anh_sau, text="Ảnh 1", padding=5)
+        frame_anh_sau_1.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=3)
+        
+        self.canvas_anh_sau = tk.Canvas(frame_anh_sau_1, bg="#2b2b2b", highlightthickness=0)
+        self.canvas_anh_sau.pack(fill=tk.BOTH, expand=True)
         self.image_anh_sau = None
         
-        # Tab 3: Minutiae
+        frame_anh_sau_2 = ttk.LabelFrame(frame_2_anh_sau, text="Ảnh 2", padding=5)
+        frame_anh_sau_2.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=3)
+        
+        self.canvas_anh_sau_2 = tk.Canvas(frame_anh_sau_2, bg="#2b2b2b", highlightthickness=0)
+        self.canvas_anh_sau_2.pack(fill=tk.BOTH, expand=True)
+        self.image_anh_sau_2 = None
+        
+        # Tab 3: Minutiae (Hiển thị cả 2 ảnh)
         tab_anh_minutiae = ttk.Frame(self.notebook)
-        self.tab_minutiae_index = self.notebook.add(tab_anh_minutiae, text="Trích đặc trưng")
-        self.canvas_anh_minutiae = tk.Canvas(tab_anh_minutiae, bg="#2b2b2b", highlightthickness=0)
-        self.canvas_anh_minutiae.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.tab_minutiae_index = self.notebook.add(tab_anh_minutiae, text="Chi tiết Minutiae")
+        
+        frame_2_anh_minutiae = ttk.Frame(tab_anh_minutiae)
+        frame_2_anh_minutiae.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        frame_anh_minutiae_1 = ttk.LabelFrame(frame_2_anh_minutiae, text="Ảnh 1", padding=5)
+        frame_anh_minutiae_1.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=3)
+        
+        self.canvas_anh_minutiae = tk.Canvas(frame_anh_minutiae_1, bg="#2b2b2b", highlightthickness=0)
+        self.canvas_anh_minutiae.pack(fill=tk.BOTH, expand=True)
         self.image_anh_minutiae = None
+        
+        frame_anh_minutiae_2 = ttk.LabelFrame(frame_2_anh_minutiae, text="Ảnh 2", padding=5)
+        frame_anh_minutiae_2.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=3)
+        
+        self.canvas_anh_minutiae_2 = tk.Canvas(frame_anh_minutiae_2, bg="#2b2b2b", highlightthickness=0)
+        self.canvas_anh_minutiae_2.pack(fill=tk.BOTH, expand=True)
+        self.image_anh_minutiae_2 = None
         
         # === PHẦN 2: THÔNG TIN (Bên phải) ===
         frame_info_container = ttk.Frame(paned_window)
@@ -305,17 +347,23 @@ class HienThiKetQua:
         style.configure('TFrame', background='#ecf0f1')
         style.configure('TLabel', background='#ecf0f1', foreground='#2c3e50')
     
-    def hien_thi_anh_goc(self, anh):
-        """Hiển thị ảnh gốc"""
+    def hien_thi_anh_goc(self, anh, anh_2=None):
+        """Hiển thị ảnh gốc (hỗ trợ cả 2 ảnh)"""
         self._hien_thi_anh_len_canvas(anh, self.canvas_anh_goc)
+        if anh_2 is not None:
+            self._hien_thi_anh_len_canvas(anh_2, self.canvas_anh_goc_2)
     
-    def hien_thi_anh_sau_xu_ly(self, anh):
-        """Hiển thị ảnh sau xử lý"""
+    def hien_thi_anh_sau_xu_ly(self, anh, anh_2=None):
+        """Hiển thị ảnh sau xử lý (hỗ trợ cả 2 ảnh)"""
         self._hien_thi_anh_len_canvas(anh, self.canvas_anh_sau)
+        if anh_2 is not None:
+            self._hien_thi_anh_len_canvas(anh_2, self.canvas_anh_sau_2)
     
-    def hien_thi_anh_after_xu_ly(self, anh):
-        """Hiển thị ảnh minutiae"""
+    def hien_thi_anh_after_xu_ly(self, anh, anh_2=None):
+        """Hiển thị ảnh minutiae (hỗ trợ cả 2 ảnh)"""
         self._hien_thi_anh_len_canvas(anh, self.canvas_anh_minutiae)
+        if anh_2 is not None:
+            self._hien_thi_anh_len_canvas(anh_2, self.canvas_anh_minutiae_2)
     
     def _hien_thi_anh_len_canvas(self, anh, canvas):
         """Hỗ trợ hiển thị ảnh lên canvas"""

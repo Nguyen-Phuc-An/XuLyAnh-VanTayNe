@@ -44,6 +44,7 @@ class XuLySuKien:
         self.anh_xu_ly = None  # Ảnh đã tiền xử lý (chưa làm mảnh)
         self.anh_manh = None
         self.minutiae = None
+        self.minutiae_ve = None
         
         # Ảnh 2
         self.anh_goc_2 = None
@@ -54,6 +55,7 @@ class XuLySuKien:
         self.anh_xu_ly_2 = None  # Ảnh đã tiền xử lý (chưa làm mảnh)
         self.anh_manh_2 = None
         self.minutiae_2 = None
+        self.minutiae_ve_2 = None
         
         self.duong_dan_anh_1 = None
         self.duong_dan_anh_2 = None
@@ -155,7 +157,9 @@ class XuLySuKien:
             try:
                 self.anh_goc, self.anh_xam = chuyen_nh_xam(duong_dan)
                 self.duong_dan_anh_1 = duong_dan
-                self.gui.hien_thi_ket_qua.hien_thi_anh_goc(self.anh_goc)
+                
+                # Hiển thị cả 2 ảnh (ảnh 1 và ảnh 2 nếu có)
+                self.gui.hien_thi_ket_qua.hien_thi_anh_goc(self.anh_goc, self.anh_goc_2)
                 
                 # Cập nhật thông tin ảnh (kích thước)
                 self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(self.anh_goc.shape if self.anh_goc is not None else (0, 0), 0, 0)
@@ -190,11 +194,11 @@ class XuLySuKien:
                 self.anh_goc_2, self.anh_xam_2 = chuyen_nh_xam(duong_dan)
                 self.duong_dan_anh_2 = duong_dan
                 
-                # Hiển thị ảnh lên giao diện
-                self.gui.hien_thi_ket_qua.hien_thi_anh_goc(self.anh_goc_2)
+                # Hiển thị cả 2 ảnh (ảnh 1 và ảnh 2)
+                self.gui.hien_thi_ket_qua.hien_thi_anh_goc(self.anh_goc, self.anh_goc_2)
                 
                 # Cập nhật thông tin ảnh (kích thước)
-                self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(self.anh_goc_2.shape if self.anh_goc_2 is not None else (0, 0), 0, 0)
+                self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(self.anh_goc.shape if self.anh_goc is not None else (0, 0), self.anh_goc_2.shape[0] if self.anh_goc_2 is not None else 0, self.anh_goc_2.shape[1] if self.anh_goc_2 is not None else 0)
                 
                 # Lưu ảnh gốc vào thư mục data/anh_goc
                 self._luu_anh(self.anh_goc_2, 'anh_goc', duong_dan)
@@ -254,7 +258,8 @@ class XuLySuKien:
             # Lưu ảnh tăng cường
             self._luu_anh(anh_tang_cuong_temp, 'anh_tang_cuong', duong_dan_temp)
             
-            self.gui.hien_thi_ket_qua.hien_thi_anh_sau_xu_ly(anh_tang_cuong_temp)
+            # Hiển thị cả 2 ảnh
+            self.gui.hien_thi_ket_qua.hien_thi_anh_sau_xu_ly(self.anh_tang_cuong, self.anh_tang_cuong_2)
             self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(f"Tiền xử lý ảnh {self.anh_hien_tai} hoàn tất!")
             
         except Exception as e:
@@ -295,7 +300,8 @@ class XuLySuKien:
             # Lưu ảnh nhị phân
             self._luu_anh(anh_nhi_phan_temp, 'anh_nhi_phan', duong_dan_temp)
             
-            self.gui.hien_thi_ket_qua.hien_thi_anh_sau_xu_ly(anh_nhi_phan_temp)
+            # Hiển thị cả 2 ảnh
+            self.gui.hien_thi_ket_qua.hien_thi_anh_sau_xu_ly(self.anh_nhi_phan, self.anh_nhi_phan_2)
             self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(f"Nhị phân hóa ảnh {self.anh_hien_tai} hoàn tất! (Ngưỡng: {ngung})")
             
         except Exception as e:
@@ -338,7 +344,8 @@ class XuLySuKien:
             # Lưu ảnh làm mảnh
             self._luu_anh(anh_manh_temp, 'anh_lam_manh', duong_dan_temp)
             
-            self.gui.hien_thi_ket_qua.hien_thi_anh_sau_xu_ly(anh_manh_temp)
+            # Hiển thị cả 2 ảnh
+            self.gui.hien_thi_ket_qua.hien_thi_anh_sau_xu_ly(self.anh_manh, self.anh_manh_2)
             self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(f"Làm mảnh ảnh {self.anh_hien_tai} hoàn tất!")
             
         except Exception as e:
@@ -393,11 +400,10 @@ class XuLySuKien:
                 # Gán kết quả
                 if self.anh_hien_tai == 1:
                     self.minutiae = minutiae_temp
+                    self.minutiae_ve = ve_minutiae_chi_tiet(anh_goc_temp, minutiae_temp)
                 else:
                     self.minutiae_2 = minutiae_temp
-                
-                # Vẽ minutiae
-                anh_ve = ve_minutiae_chi_tiet(anh_goc_temp, minutiae_temp)
+                    self.minutiae_ve_2 = ve_minutiae_chi_tiet(anh_goc_temp, minutiae_temp)
                 
                 thông_báo += f"🔎 Minutiae: {num_endings} ending + {num_bifurcations} bifurcation = {total_minutiae}\n"
             except Exception as e:
@@ -438,9 +444,16 @@ class XuLySuKien:
             
             self.gui.hien_thi_ket_qua.cap_nhat_thong_bao(thông_báo)
             
-            if 'anh_ve' in locals():
-                self.gui.hien_thi_ket_qua.hien_thi_anh_after_xu_ly(anh_ve)
-                self._luu_anh(anh_ve, 'dac_trung', duong_dan_temp)
+            # Hiển thị cả 2 ảnh minutiae
+            anh_ve_1 = self.minutiae_ve if hasattr(self, 'minutiae_ve') else None
+            anh_ve_2 = self.minutiae_ve_2 if hasattr(self, 'minutiae_ve_2') else None
+            
+            if anh_ve_1 is not None or anh_ve_2 is not None:
+                self.gui.hien_thi_ket_qua.hien_thi_anh_after_xu_ly(anh_ve_1, anh_ve_2)
+                if self.anh_hien_tai == 1 and anh_ve_1 is not None:
+                    self._luu_anh(anh_ve_1, 'dac_trung', self.duong_dan_anh_1)
+                elif self.anh_hien_tai == 2 and anh_ve_2 is not None:
+                    self._luu_anh(anh_ve_2, 'dac_trung', self.duong_dan_anh_2)
             
             self.gui.hien_thi_ket_qua.cap_nhat_thong_tin(anh_goc_temp.shape, 0, 0)
             
